@@ -5,12 +5,15 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Box, CircleUserRound, House, SquareUserRound } from "lucide-react";
 
-
-export const Aside = () => {
+type props = {
+   showAside: boolean;
+   setShowAside: () => void;
+}
+export const Aside = ({ showAside, setShowAside }: props) => {
    const [activeAsideItem, setAcitveAsideItem] = useState(0);
    const router = useRouter();
    const pathname = usePathname();
-   
+
    const routeToIdMap: Record<string, number> = {
       '/': 0,
       '/products': 1,
@@ -29,8 +32,8 @@ export const Aside = () => {
       { id: 2, icon: <SquareUserRound size={20} />, title: 'Empregados' },
       { id: 3, icon: <CircleUserRound size={20} />, title: 'Perfil' },
    ]
-   function checkPathName(itemId: number){
-      switch(itemId){
+   function checkPathName(itemId: number) {
+      switch (itemId) {
          case 0:
             return '/';
          case 1:
@@ -44,14 +47,16 @@ export const Aside = () => {
       }
    }
 
-   function handleChangeMain(itemId: number){
+   function handleChangeMain(itemId: number) {
       setAcitveAsideItem(itemId);
       let pathname = checkPathName(itemId);
       router.push(pathname);
    }
 
    return (
-      <aside className="fixed left-0 top-0 bottom-0 flex flex-col gap-5 sm:w-60 lg:w-72 bg-[#009966] text-white dark:text-black">
+      <aside className={`fixed left-0 top-0 bottom-0 flex flex-col gap-5 sm:w-60 lg:w-72 z-40
+         bg-[#009966] text-white dark:text-black transition-transform duration-300
+         ${showAside ? "translate-x-0" : "-translate-x-full"} sm:translate-x-0`}>
          <div className="flex items-center gap-3 p-5 mx-auto">
             <Image src={Logo} alt="Logo da Vistats" className="bg-white dark:bg-black rounded-full p-1 w-12" />
             <p className="text-2xl font-bold uppercase">Vistats</p>

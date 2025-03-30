@@ -5,11 +5,33 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/lib/supabase";
 import { Pen, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
+import { z } from "zod";
+
+const productSchema = z.object({
+   name: z.string().trim().min(1, "O nome do produto é obrigatório."),
+   price: z.string()
+      .trim()
+      .min(1, "O preço é obrigatório.")
+      .refine(value => !isNaN(parseFloat(value)) && parseFloat(value) > 0, "O preço deve ser um número válido."),
+   quantity: z.string()
+      .trim()
+      .min(1, "A quantidade é obrigatória.")
+      .refine(value => !isNaN(parseInt(value)) && parseInt(value) > 0, "A quantidade deve ser um número válido."),
+   categoryName: z.string().trim(),
+   selectedCategory: z.string().trim(),
+}).refine((data) => {
+   // Apenas um dos campos pode ser preenchido: categoryName ou selectedCategory
+   return !(data.categoryName && data.selectedCategory && data.selectedCategory !== "none");
+}, {
+   message: "Preencha apenas um dos campos: Criar Categoria ou Selecionar Categoria.",
+   path: ["categoryName"],
+});
 
 interface Product {
    id: string;
@@ -18,7 +40,6 @@ interface Product {
    quantity: number;
    category_id?: any;
 }
-
 export default function Products() {
    const router = useRouter();
    const [isLoading, setIsLoading] = useState(true);
@@ -26,6 +47,7 @@ export default function Products() {
    const [isOpen, setIsOpen] = useState(false);
    const [alertOpen, setAlertOpen] = useState(false);
    const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+   const [selectedCategory, setSelectedCategory] = useState('');
    const [modalProduct, setModalProduct] = useState<Product | null>(null);
    const [newProduct, setNewProduct] = useState({
       name: '',
@@ -34,6 +56,8 @@ export default function Products() {
       category_id: ''
    });
    const [categoryName, setCategoryName] = useState('');
+   const [isError, setIsError] = useState(true);
+   const [errorMessage, setErrorMessage] = useState('');
 
    useEffect(() => {
       checkUser();
@@ -47,6 +71,22 @@ export default function Products() {
          router.push('/');
       }
    };
+
+   // async function handleCheckForm() {
+   //    console.log("------------");
+   //    console.log("categoryName: ", categoryName);
+   //    console.log("selectedCategory: ", selectedCategory);
+   //    if (selectedCategory && selectedCategory !== 'none' && categoryName !== '') {
+   //       setErrorMessage("Somente um campo de categoria deve estar preenchido.")
+   //       console.log("os dois estão preenchidos, ERRO")
+   //    } else if ((!selectedCategory || selectedCategory === 'none') && categoryName === '') {
+   //       setErrorMessage("Preencha um dos campos de categoria.")
+   //       console.log("os dois estão vazios, ERRO")
+   //    } else {
+   //       console.log('certo, OK')
+   //    }
+   //    console.log("------------");
+   // }
 
    async function fetchProducts() {
       try {
@@ -74,42 +114,59 @@ export default function Products() {
       }
 
       try {
-         // Cria a categoria e pegar o ID dela
-         const alreadyHaveCategory = categories.filter((c) => c.name.toLowerCase().trim() === categoryName.toLowerCase().trim())
+         // valida os campos
+         const validatedData = productSchema.parse({
+            name: newProduct.name,
+            price: newProduct.price,
+            quantity: newProduct.quantity,
+            categoryName: categoryName,
+            selectedCategory: selectedCategory,
+         });
+
+         console.log("Dados válidos: ", validatedData);
+
+         // Verifica se a categoria já existe
+         const alreadyHaveCategory = categories.some(
+            (c) => c.name.toLowerCase().trim() === categoryName.toLowerCase().trim()
+         );
          if (alreadyHaveCategory) {
             return setAlertOpen(true);
          }
-         const { data: categoryData, error: categoryError } = await supabase.from("categories")
+
+         const { data: categoryData, error: categoryError } = await supabase
+            .from("categories")
             .insert({ name: categoryName, user_id: userData.user.id })
             .select("id")
             .single();
 
          if (categoryError) {
-            return console.error("Erro ao criar categoria:", categoryError);
+            return console.error("Erro ao criar categoria: ", categoryError);
          }
 
-         console.log("Categoria criada com ID:", categoryData.id);
-
-         // Adiciona o produto com o ID da categoria criada
-         const { data, error } = await supabase.from('products').insert({
-            name: newProduct.name.trim(),
-            price: parseFloat(newProduct.price),
-            quantity: parseInt(newProduct.quantity),
+         // Adiciona o produto
+         const { data, error } = await supabase.from("products").insert({
+            name: validatedData.name,
+            price: parseFloat(validatedData.price),
+            quantity: parseInt(validatedData.quantity),
             category_id: categoryData.id,
-            user_id: userData.user.id
+            user_id: userData.user.id,
          });
 
          if (error) {
             return console.error("Erro ao adicionar produto:", error);
          }
 
-         console.log("Produto adicionado:", data);
-         setNewProduct({ name: '', price: '', quantity: '', category_id: categoryData.id });
+         // Reseta os campos
+         setNewProduct({ name: "", price: "", quantity: "", category_id: categoryData.id });
          fetchProducts();
       } catch (error: any) {
-         console.error("Erro ao adicionar produto:", error);
+         if (error instanceof z.ZodError) {
+            setErrorMessage(error.errors[0].message);
+            setIsError(true);
+            console.error("Erro de validação: ", error.errors);
+         }
       }
-   };
+   }
 
    async function handleDeleteProduct(id: string) {
       try {
@@ -173,7 +230,11 @@ export default function Products() {
                      <Input
                         placeholder="Nome do produto"
                         value={newProduct.name}
-                        onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                        onChange={(e) => {
+                           setNewProduct({ ...newProduct, name: e.target.value }),
+                              setIsError(false),
+                              setErrorMessage('')
+                        }}
                         required
                      />
                      <Input
@@ -181,26 +242,54 @@ export default function Products() {
                         step="0.01"
                         placeholder="Preço"
                         value={newProduct.price}
-                        onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                        onChange={(e) => {
+                           setNewProduct({ ...newProduct, price: e.target.value }),
+                              setIsError(false),
+                              setErrorMessage('')
+                        }}
                         required
                      />
                      <Input
                         type="number"
                         placeholder="Quantidade"
                         value={newProduct.quantity}
-                        onChange={(e) => setNewProduct({ ...newProduct, quantity: e.target.value })}
+                        onChange={(e) => {
+                           setNewProduct({ ...newProduct, quantity: e.target.value }),
+                              setIsError(false),
+                              setErrorMessage('')
+                        }}
                         required
                      />
                      <Input
                         type="text"
-                        placeholder="Categoria ( roupa, tecnologia... )"
+                        placeholder="Criar Categoria ( roupa, tecnologia... )"
                         value={categoryName}
                         onChange={(e) => setCategoryName(e.target.value)}
                         required
                      />
+                     <Select onValueChange={(value) => {
+                        setSelectedCategory(value),
+                           setIsError(false)
+                     }}>
+                        <SelectTrigger className="w-full">
+                           <SelectValue placeholder="Selecione uma categoria" />
+                        </SelectTrigger>
+                        <SelectContent>
+                           <SelectGroup>
+                              <SelectLabel>Categorias</SelectLabel>
+                              <SelectItem value="none">Nenhum</SelectItem>
+                              {categories.map((c) => (
+                                 <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                              ))}
+                           </SelectGroup>
+                        </SelectContent>
+                     </Select>
                      <Button type="submit" className="w-full">
                         Adicionar Produto
                      </Button>
+                     {isError &&
+                        <p className="text-red-600 text-center text-sm">{errorMessage}</p>
+                     }
                   </form>
                </CardContent>
             </Card>
