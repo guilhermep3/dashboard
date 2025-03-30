@@ -2,7 +2,7 @@
 import { Loading } from "@/components/loading";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,6 +16,7 @@ interface Product {
    name: string;
    price: number;
    quantity: number;
+   category_id?: any;
 }
 
 export default function Products() {
@@ -23,17 +24,21 @@ export default function Products() {
    const [isLoading, setIsLoading] = useState(true);
    const [products, setProducts] = useState<Product[]>([]);
    const [isOpen, setIsOpen] = useState(false);
+   const [alertOpen, setAlertOpen] = useState(false);
+   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
    const [modalProduct, setModalProduct] = useState<Product | null>(null);
-
    const [newProduct, setNewProduct] = useState({
       name: '',
       price: '',
       quantity: '',
+      category_id: ''
    });
+   const [categoryName, setCategoryName] = useState('');
 
    useEffect(() => {
       checkUser();
       fetchProducts();
+      fetchCategories();
    }, [])
 
    async function checkUser() {
@@ -62,23 +67,47 @@ export default function Products() {
 
    async function handleAddProduct(e: React.FormEvent) {
       e.preventDefault();
-      const { data: userData } = await supabase.auth.getUser();
+
+      const { data: userData, error: errorGetUser } = await supabase.auth.getUser();
+      if (!userData.user) {
+         return console.error("Usuário não autenticado!", errorGetUser);
+      }
+
       try {
+         // Cria a categoria e pegar o ID dela
+         const alreadyHaveCategory = categories.filter((c) => c.name.toLowerCase().trim() === categoryName.toLowerCase().trim())
+         if (alreadyHaveCategory) {
+            return setAlertOpen(true);
+         }
+         const { data: categoryData, error: categoryError } = await supabase.from("categories")
+            .insert({ name: categoryName, user_id: userData.user.id })
+            .select("id")
+            .single();
+
+         if (categoryError) {
+            return console.error("Erro ao criar categoria:", categoryError);
+         }
+
+         console.log("Categoria criada com ID:", categoryData.id);
+
+         // Adiciona o produto com o ID da categoria criada
          const { data, error } = await supabase.from('products').insert({
-            name: newProduct.name,
+            name: newProduct.name.trim(),
             price: parseFloat(newProduct.price),
             quantity: parseInt(newProduct.quantity),
-            category_id: '217c8250-9956-4820-b67f-f2dbca706cd8',
-            user_id: userData.user?.id
+            category_id: categoryData.id,
+            user_id: userData.user.id
          });
-         console.log("userData.user?.id: ", userData.user?.id)
 
-         if (error) return console.log('if error: ', error)
+         if (error) {
+            return console.error("Erro ao adicionar produto:", error);
+         }
 
-         setNewProduct({ name: '', price: '', quantity: '' });
+         console.log("Produto adicionado:", data);
+         setNewProduct({ name: '', price: '', quantity: '', category_id: categoryData.id });
          fetchProducts();
       } catch (error: any) {
-         console.log("erro ao adicionar: ", error)
+         console.error("Erro ao adicionar produto:", error);
       }
    };
 
@@ -103,17 +132,31 @@ export default function Products() {
             quantity: modalProduct?.quantity
          }).eq("id", modalProduct?.id)
 
-         if (error) console.log("erro: ",error);
+         if (error) console.log("erro: ", error);
          setIsOpen(false);
          fetchProducts();
       } catch (error) {
-         console.log('Erro ao atualizar o produto: ',error)
+         console.log('Erro ao atualizar o produto: ', error)
+      }
+   };
+
+   async function fetchCategories() {
+      const { data, error } = await supabase
+         .from('categories')
+         .select('id, name')
+         .eq('user_id', (await supabase.auth.getUser())?.data.user?.id);
+
+      if (error) {
+         console.error('Erro ao buscar categorias:', error);
+      } else {
+         setCategories(data);
       }
    };
 
    function handleOpenModal(product: Product) {
       setModalProduct(product);
       setIsOpen(true);
+      console.log(categories)
    };
 
 
@@ -148,6 +191,13 @@ export default function Products() {
                         onChange={(e) => setNewProduct({ ...newProduct, quantity: e.target.value })}
                         required
                      />
+                     <Input
+                        type="text"
+                        placeholder="Categoria ( roupa, tecnologia... )"
+                        value={categoryName}
+                        onChange={(e) => setCategoryName(e.target.value)}
+                        required
+                     />
                      <Button type="submit" className="w-full">
                         Adicionar Produto
                      </Button>
@@ -158,6 +208,7 @@ export default function Products() {
                <TableHeader>
                   <TableRow>
                      <TableHead className="p-3">Nome</TableHead>
+                     <TableHead>Categoria</TableHead>
                      <TableHead>Preço</TableHead>
                      <TableHead>Quantidade</TableHead>
                      <TableHead>Ações</TableHead>
@@ -172,6 +223,10 @@ export default function Products() {
                      products.map((product) => (
                         <TableRow key={product.id}>
                            <TableCell className="p-3">{product.name}</TableCell>
+                           <TableCell>
+                              {categories.find((c) => c.id === product.category_id)?.name || "Sem categoria"}
+                           </TableCell>
+
                            <TableCell>R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
                            <TableCell>{product.quantity.toLocaleString('pt-BR')}</TableCell>
                            <TableCell className="flex">
@@ -231,6 +286,17 @@ export default function Products() {
                      Cancelar
                   </DialogClose>
                </div>
+            </DialogContent>
+         </Dialog>
+         <Dialog open={alertOpen} onOpenChange={setAlertOpen}>
+            <DialogContent>
+               <DialogHeader>
+                  <DialogTitle className="text-center">Já possui uma categoria com o mesmo nome</DialogTitle>
+                  <DialogDescription className="text-center">Tente outro nome ou selecione o já criado</DialogDescription>
+               </DialogHeader>
+               <DialogClose className="bg-red-600 px-3 py-1 rounded-md text-white cursor-pointer w-fit mx-auto mt-3">
+                  Confirmar
+               </DialogClose>
             </DialogContent>
          </Dialog>
       </div >
