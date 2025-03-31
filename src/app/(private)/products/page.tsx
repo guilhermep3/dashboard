@@ -63,6 +63,9 @@ export default function Products() {
    const [modalTitle, setModalTitle] = useState('');
    const [modalDescription, setModalDescription] = useState('');
    const [modalData, setModalData] = useState<any>(null);
+   const [modalAction, setModalAction] = useState<() => void>(() => { });
+   const [sortColumn, setSortColumn] = useState<keyof Product | null>(null);
+   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
    useEffect(() => {
       checkUser();
@@ -202,9 +205,7 @@ export default function Products() {
          }
          setNewProduct({ name: "", price: "", quantity: "", category_id: "" });
          setCategoryName("");
-         setSelectedCategory("none");
          fetchProducts();
-         setSelectedCategory("none");
          setIsError(false);
       } catch (error: any) {
          const firstError = error.errors[0];
@@ -223,6 +224,7 @@ export default function Products() {
       } catch (error) {
          console.log("Erro ao excluir produto: ", error)
       }
+      setAlertOpen(false);
    };
 
    async function handleUpdateProduct() {
@@ -240,6 +242,7 @@ export default function Products() {
       } catch (error) {
          console.log('Erro ao atualizar o produto: ', error)
       }
+      setIsOpen(false);
    };
 
    async function fetchCategories() {
@@ -255,29 +258,51 @@ export default function Products() {
       }
    };
 
-   function openModal(title: string, description: string, data?: any) {
-      setModalTitle(title);
-      setModalDescription(description);
-      setModalData(data);
-      setIsOpen(true);
+   async function handleDeleteCategory(id: string) {
+      try {
+         const { data, error } = await supabase.from("categories").delete().eq('id', id);
+         console.log('data: ', data)
+         console.log('error: ', error)
+         if (error) {
+            console.log("Erro ao deletar: ", error)
+            return;
+         }
+         setCategories(categories.filter(category => category.id !== id));
+      } catch (error) {
+         console.log("Erro ao excluir categoria: ", error)
+      }
+      fetchProducts();
+      setAlertOpen(false);
    }
 
-   function handleOpenModal(product: Product) {
+   function openModal(title: string, description: string, action: () => void, data?: any) {
+      setModalTitle(title);
+      setModalDescription(description);
+      setModalAction(() => action);
+      setModalData(data);
+      setAlertOpen(true);
+   }
+
+   function handleEditProduct(product: Product) {
       setModalProduct(product);
       setIsOpen(true);
-      console.log(categories)
    };
    function handleModalDeleteProduct(product: Product) {
       openModal(
          `Deletar ${product.name}?`,
          "Tem certeza que deseja excluir este produto? Essa ação não pode ser desfeita.",
+         () => handleDeleteProduct(product.id),
          product
       );
    }
 
    function handleModalCategory(category: any) {
-      setIsOpen(true);
-      setModalTitle(`Você quer deletar a categoria ${category.name}?`);
+      openModal(
+         `Deletar a categoria ${category.name} ?`,
+         "Ao excluir uma categoria, TODOS os produtos serão excluidos também",
+         () => handleDeleteCategory(category.id),
+         category
+      )
    };
 
    const categoryCounts = products.reduce((acc, product) => {
@@ -285,8 +310,47 @@ export default function Products() {
       return acc;
    }, {} as Record<string, number>);
 
+
+   function handleSort2(column: keyof Product) {
+      if (sortColumn === column) {
+         setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      } else {
+         setSortColumn(column);
+         setSortDirection("asc");
+      }
+   };
+
+   const handleSort = (column: keyof Product) => {
+      if (sortColumn === column) {
+         // se a coluna a ser ordenada é a atual, inverta o sentido
+         setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+      } else {
+         setSortColumn(column);
+         setSortDirection("asc");
+      }
+   };
+
+   const sortedProducts = [...products].sort((a, b) => {
+      if (!sortColumn) return 0;
+
+      const valueA = a[sortColumn];
+      const valueB = b[sortColumn];
+
+      // se for string, ordene alfabéticamente
+      if (typeof valueA === "string" && typeof valueB === "string") {
+         return sortDirection === "asc" ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA);
+      }
+
+      // se for numero, ordene numericamente
+      if (typeof valueA === "number" && typeof valueB === "number") {
+         return sortDirection === "asc" ? valueA - valueB : valueB - valueA;
+      }
+
+      return 0;
+   });
+
    return (
-      <div className="p-5 w-full max-w-[1200px] mx-auto">
+      <div className="p-5 pb-10 w-full max-w-[1200px] mx-auto">
          <h1 className="mb-5">Seus Produtos</h1>
          <div className="grid gap-5 grid-cols-1">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -382,10 +446,18 @@ export default function Products() {
             <Table className="bg-white dark:bg-zinc-900 rounded-lg">
                <TableHeader>
                   <TableRow>
-                     <TableHead className="p-3">Nome</TableHead>
-                     <TableHead>Categoria</TableHead>
-                     <TableHead>Preço</TableHead>
-                     <TableHead>Quantidade</TableHead>
+                     <TableHead className="p-3 cursor-pointer" onClick={() => handleSort("name")}>
+                        Nome {sortColumn === "name" ? (sortDirection === "asc" ? "▲" : "▼") : ""}
+                     </TableHead>
+                     <TableHead className="cursor-pointer" onClick={() => handleSort("category_id")}>
+                        Categoria {sortColumn === "category_id" ? (sortDirection === "asc" ? "▲" : "▼") : ""}
+                     </TableHead>
+                     <TableHead className="cursor-pointer" onClick={() => handleSort("price")}>
+                        Preço {sortColumn === "price" ? (sortDirection === "asc" ? "▲" : "▼") : ""}
+                     </TableHead>
+                     <TableHead className="cursor-pointer" onClick={() => handleSort("quantity")}>
+                        Quantidade {sortColumn === "quantity" ? (sortDirection === "asc" ? "▲" : "▼") : ""}
+                     </TableHead>
                      <TableHead>Ações</TableHead>
                   </TableRow>
                </TableHeader>
@@ -395,22 +467,23 @@ export default function Products() {
                         <TableCell colSpan={4}>Carregando...</TableCell>
                      </TableRow>
                   ) : (
-                     products.map((product) => (
+                     sortedProducts.map((product) => (
                         <TableRow key={product.id}>
                            <TableCell className="p-3">{product.name}</TableCell>
                            <TableCell>
                               {categories.find((c) => c.id === product.category_id)?.name || "Sem categoria"}
                            </TableCell>
-
-                           <TableCell>R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
-                           <TableCell>{product.quantity.toLocaleString('pt-BR')}</TableCell>
+                           <TableCell>R$ {product.price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
+                           <TableCell>{product.quantity.toLocaleString("pt-BR")}</TableCell>
                            <TableCell className="flex">
                               <Trash2 fill="transparent" stroke="#fff" size={28}
                                  className="mr-2 bg-red-600 p-1 cursor-pointer rounded-md"
-                                 onClick={() => handleDeleteProduct(product.id)} />
+                                 onClick={() => handleModalDeleteProduct(product)}
+                              />
                               <Pen fill="transparent" stroke="#fff" size={28}
                                  className="bg-emerald-600 p-1 cursor-pointer rounded-md"
-                                 onClick={() => handleOpenModal(product)} />
+                                 onClick={() => handleEditProduct(product)}
+                              />
                            </TableCell>
                         </TableRow>
                      ))
@@ -454,6 +527,9 @@ export default function Products() {
                         required
                      />
                   </div>
+                  <div>
+                     editar grupo
+                  </div>
                </form>
                <div className="flex justify-center gap-3">
                   <Button onClick={handleUpdateProduct}>Confirmar</Button>
@@ -466,12 +542,15 @@ export default function Products() {
          <Dialog open={alertOpen} onOpenChange={setAlertOpen}>
             <DialogContent>
                <DialogHeader>
-                  <DialogTitle className="text-center">Já possui uma categoria com o mesmo nome</DialogTitle>
-                  <DialogDescription className="text-center">Tente outro nome ou selecione o já criado</DialogDescription>
+                  <DialogTitle className="text-center">{modalTitle}</DialogTitle>
+                  <DialogDescription className="text-center text-zinc-700 dark:text-zinc-300 my-1">{modalDescription}</DialogDescription>
                </DialogHeader>
-               <DialogClose className="bg-red-600 px-3 py-1 rounded-md text-white cursor-pointer w-fit mx-auto mt-3">
-                  Confirmar
-               </DialogClose>
+               <div className="flex justify-center items-center gap-5 mx-auto">
+                  <Button onClick={modalAction}>Confirmar</Button>
+                  <DialogClose className="bg-red-600 px-3 py-[6px] rounded-md text-white cursor-pointer w-fit">
+                     Cancelar
+                  </DialogClose>
+               </div>
             </DialogContent>
          </Dialog>
       </div >
