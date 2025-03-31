@@ -23,15 +23,17 @@ const productSchema = z.object({
       .trim()
       .min(1, "A quantidade é obrigatória.")
       .refine(value => !isNaN(parseInt(value)) && parseInt(value) > 0, "A quantidade deve ser um número válido."),
-   categoryName: z.string().trim(),
-   selectedCategory: z.string().trim(),
+   categoryName: z.string().optional(),
+   selectedCategory: z.string().optional(),
 }).refine((data) => {
-   // Apenas um dos campos pode ser preenchido: categoryName ou selectedCategory
-   return !(data.categoryName && data.selectedCategory && data.selectedCategory !== "none");
+   const isCreatingCategory = data.categoryName && data.categoryName.trim() !== "";
+   const isSelectingCategory = data.selectedCategory && data.selectedCategory.trim() !== "" && data.selectedCategory !== "none";
+   return !(isCreatingCategory && isSelectingCategory) && (isCreatingCategory || isSelectingCategory);
 }, {
    message: "Preencha apenas um dos campos: Criar Categoria ou Selecionar Categoria.",
    path: ["categoryName"],
 });
+
 
 interface Product {
    id: string;
@@ -46,8 +48,6 @@ export default function Products() {
    const [products, setProducts] = useState<Product[]>([]);
    const [isOpen, setIsOpen] = useState(false);
    const [alertOpen, setAlertOpen] = useState(false);
-   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-   const [selectedCategory, setSelectedCategory] = useState('');
    const [modalProduct, setModalProduct] = useState<Product | null>(null);
    const [newProduct, setNewProduct] = useState({
       name: '',
@@ -55,9 +55,14 @@ export default function Products() {
       quantity: '',
       category_id: ''
    });
+   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+   const [selectedCategory, setSelectedCategory] = useState('');
    const [categoryName, setCategoryName] = useState('');
    const [isError, setIsError] = useState(true);
    const [errorMessage, setErrorMessage] = useState('');
+   const [modalTitle, setModalTitle] = useState('');
+   const [modalDescription, setModalDescription] = useState('');
+   const [modalData, setModalData] = useState<any>(null);
 
    useEffect(() => {
       checkUser();
@@ -72,22 +77,6 @@ export default function Products() {
       }
    };
 
-   // async function handleCheckForm() {
-   //    console.log("------------");
-   //    console.log("categoryName: ", categoryName);
-   //    console.log("selectedCategory: ", selectedCategory);
-   //    if (selectedCategory && selectedCategory !== 'none' && categoryName !== '') {
-   //       setErrorMessage("Somente um campo de categoria deve estar preenchido.")
-   //       console.log("os dois estão preenchidos, ERRO")
-   //    } else if ((!selectedCategory || selectedCategory === 'none') && categoryName === '') {
-   //       setErrorMessage("Preencha um dos campos de categoria.")
-   //       console.log("os dois estão vazios, ERRO")
-   //    } else {
-   //       console.log('certo, OK')
-   //    }
-   //    console.log("------------");
-   // }
-
    async function fetchProducts() {
       try {
          const { data, error } = await supabase
@@ -96,7 +85,6 @@ export default function Products() {
             .order('created_at', { ascending: false });
 
          if (error) throw error;
-         console.log("data: ", data)
          setProducts(data || []);
       } catch (error: any) {
          console.log(error)
@@ -112,61 +100,118 @@ export default function Products() {
       if (!userData.user) {
          return console.error("Usuário não autenticado!", errorGetUser);
       }
+      console.log("categoryName: ", categoryName.trim())
+      console.log("selectedCategory: ", selectedCategory)
+
+      const isCreatingCategory = categoryName.trim() !== '';
+      const isSelectingCategory = selectedCategory !== '' && selectedCategory !== 'none';
+
+      console.log("isCreatingCategory: ", isCreatingCategory)
+      console.log("isSelectingCategory: ", isSelectingCategory)
+
+      if (!isCreatingCategory && !isSelectingCategory) {
+         setErrorMessage("Preencha um dos campos de categoria.");
+         setIsError(true);
+         return;
+      } else if (isCreatingCategory && isSelectingCategory) {
+         setErrorMessage("Preencha apenas um campo de categoria.");
+         setIsError(true);
+         return;
+      }
 
       try {
-         // valida os campos
-         const validatedData = productSchema.parse({
-            name: newProduct.name,
-            price: newProduct.price,
-            quantity: newProduct.quantity,
-            categoryName: categoryName,
-            selectedCategory: selectedCategory,
-         });
+         let categoryId: string | null = null;
+         if (isCreatingCategory) {
+            const validatedData = productSchema.parse({
+               name: newProduct.name,
+               price: newProduct.price,
+               quantity: newProduct.quantity,
+               categoryName: categoryName
+            })
 
-         console.log("Dados válidos: ", validatedData);
+            const alreadyHaveCategory = categories.some(
+               (c) => c.name.toLowerCase().trim() === categoryName.toLowerCase().trim()
+            );
+            if (alreadyHaveCategory) {
+               setErrorMessage("Essa categoria já existe!");
+               setIsError(true);
+               return;
+            }
+            console.log("categoryName: ", categoryName)
+            const { data: categoryData, error: categoryError } = await supabase
+               .from("categories")
+               .insert({ name: categoryName, user_id: userData.user.id })
+               .select("id")
+               .single();
 
-         // Verifica se a categoria já existe
-         const alreadyHaveCategory = categories.some(
-            (c) => c.name.toLowerCase().trim() === categoryName.toLowerCase().trim()
-         );
-         if (alreadyHaveCategory) {
-            return setAlertOpen(true);
+            if (categoryError) {
+               return console.error("Erro ao criar categoria: ", categoryError);
+            }
+
+            categoryId = categoryData.id;
+
+            // Adiciona o produto
+            const { error } = await supabase.from("products").insert({
+               name: validatedData.name,
+               price: parseFloat(validatedData.price),
+               quantity: parseInt(validatedData.quantity),
+               category_id: categoryId,
+               user_id: userData.user.id,
+            });
+
+            fetchCategories();
+
+            if (error) {
+               return console.error("Erro ao adicionar produto:", error);
+            }
          }
+         if (isSelectingCategory) {
+            const validatedData = productSchema.parse({
+               name: newProduct.name,
+               price: newProduct.price,
+               quantity: newProduct.quantity,
+               selectedCategory: selectedCategory
+            });
+            console.log("validatedData: ", validatedData)
+            console.log("selectedCategory: ", selectedCategory)
 
-         const { data: categoryData, error: categoryError } = await supabase
-            .from("categories")
-            .insert({ name: categoryName, user_id: userData.user.id })
-            .select("id")
-            .single();
+            const selectedCat = categories.find((c) => c.name === selectedCategory);
+            if (!selectedCat) {
+               setErrorMessage("Categoria selecionada inválida.");
+               setIsError(true);
+               return;
+            }
+            categoryId = selectedCat.id;
+            if (!categoryId) {
+               setErrorMessage("Erro ao definir categoria.");
+               setIsError(true);
+               return;
+            }
 
-         if (categoryError) {
-            return console.error("Erro ao criar categoria: ", categoryError);
+            // Adiciona o produto
+            const { error } = await supabase.from("products").insert({
+               name: validatedData.name,
+               price: parseFloat(validatedData.price),
+               quantity: parseInt(validatedData.quantity),
+               category_id: categoryId,
+               user_id: userData.user.id,
+            });
+            if (error) {
+               return console.error("Erro ao adicionar produto:", error);
+            }
          }
-
-         // Adiciona o produto
-         const { data, error } = await supabase.from("products").insert({
-            name: validatedData.name,
-            price: parseFloat(validatedData.price),
-            quantity: parseInt(validatedData.quantity),
-            category_id: categoryData.id,
-            user_id: userData.user.id,
-         });
-
-         if (error) {
-            return console.error("Erro ao adicionar produto:", error);
-         }
-
-         // Reseta os campos
-         setNewProduct({ name: "", price: "", quantity: "", category_id: categoryData.id });
+         setNewProduct({ name: "", price: "", quantity: "", category_id: "" });
+         setCategoryName("");
+         setSelectedCategory("none");
          fetchProducts();
+         setSelectedCategory("none");
+         setIsError(false);
       } catch (error: any) {
-         if (error instanceof z.ZodError) {
-            setErrorMessage(error.errors[0].message);
-            setIsError(true);
-            console.error("Erro de validação: ", error.errors);
-         }
+         const firstError = error.errors[0];
+         setErrorMessage(firstError.message);
+         setIsError(true);
       }
-   }
+   };
 
    async function handleDeleteProduct(id: string) {
       try {
@@ -210,89 +255,130 @@ export default function Products() {
       }
    };
 
+   function openModal(title: string, description: string, data?: any) {
+      setModalTitle(title);
+      setModalDescription(description);
+      setModalData(data);
+      setIsOpen(true);
+   }
+
    function handleOpenModal(product: Product) {
       setModalProduct(product);
       setIsOpen(true);
       console.log(categories)
    };
+   function handleModalDeleteProduct(product: Product) {
+      openModal(
+         `Deletar ${product.name}?`,
+         "Tem certeza que deseja excluir este produto? Essa ação não pode ser desfeita.",
+         product
+      );
+   }
 
+   function handleModalCategory(category: any) {
+      setIsOpen(true);
+      setModalTitle(`Você quer deletar a categoria ${category.name}?`);
+   };
+
+   const categoryCounts = products.reduce((acc, product) => {
+      acc[product.category_id] = (acc[product.category_id] || 0) + 1;
+      return acc;
+   }, {} as Record<string, number>);
 
    return (
       <div className="p-5 w-full max-w-[1200px] mx-auto">
          <h1 className="mb-5">Seus Produtos</h1>
          <div className="grid gap-5 grid-cols-1">
-            <Card className="w-full max-w-96">
-               <CardHeader>
-                  <CardTitle className="text-lg">Adicionar Produto</CardTitle>
-               </CardHeader>
-               <CardContent>
-                  <form onSubmit={handleAddProduct} className="space-y-4">
-                     <Input
-                        placeholder="Nome do produto"
-                        value={newProduct.name}
-                        onChange={(e) => {
-                           setNewProduct({ ...newProduct, name: e.target.value }),
-                              setIsError(false),
-                              setErrorMessage('')
-                        }}
-                        required
-                     />
-                     <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="Preço"
-                        value={newProduct.price}
-                        onChange={(e) => {
-                           setNewProduct({ ...newProduct, price: e.target.value }),
-                              setIsError(false),
-                              setErrorMessage('')
-                        }}
-                        required
-                     />
-                     <Input
-                        type="number"
-                        placeholder="Quantidade"
-                        value={newProduct.quantity}
-                        onChange={(e) => {
-                           setNewProduct({ ...newProduct, quantity: e.target.value }),
-                              setIsError(false),
-                              setErrorMessage('')
-                        }}
-                        required
-                     />
-                     <Input
-                        type="text"
-                        placeholder="Criar Categoria ( roupa, tecnologia... )"
-                        value={categoryName}
-                        onChange={(e) => setCategoryName(e.target.value)}
-                        required
-                     />
-                     <Select onValueChange={(value) => {
-                        setSelectedCategory(value),
-                           setIsError(false)
-                     }}>
-                        <SelectTrigger className="w-full">
-                           <SelectValue placeholder="Selecione uma categoria" />
-                        </SelectTrigger>
-                        <SelectContent>
-                           <SelectGroup>
-                              <SelectLabel>Categorias</SelectLabel>
-                              <SelectItem value="none">Nenhum</SelectItem>
-                              {categories.map((c) => (
-                                 <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                              ))}
-                           </SelectGroup>
-                        </SelectContent>
-                     </Select>
-                     <Button type="submit" className="w-full">
-                        Adicionar Produto
-                     </Button>
-                     {isError &&
-                        <p className="text-red-600 text-center text-sm">{errorMessage}</p>
-                     }
-                  </form>
-               </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+               <Card className="w-full max-w-96">
+                  <CardHeader>
+                     <CardTitle className="text-lg">Adicionar Produto</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                     <form onSubmit={handleAddProduct} className="space-y-4">
+                        <Input
+                           placeholder="Nome do produto"
+                           value={newProduct.name}
+                           onChange={(e) => {
+                              setNewProduct({ ...newProduct, name: e.target.value }),
+                                 setIsError(false),
+                                 setErrorMessage('')
+                           }}
+                           required
+                        />
+                        <Input
+                           type="number"
+                           step="0.01"
+                           placeholder="Preço"
+                           value={newProduct.price}
+                           onChange={(e) => {
+                              setNewProduct({ ...newProduct, price: e.target.value }),
+                                 setIsError(false),
+                                 setErrorMessage('')
+                           }}
+                           required
+                        />
+                        <Input
+                           type="number"
+                           placeholder="Quantidade"
+                           value={newProduct.quantity}
+                           onChange={(e) => {
+                              setNewProduct({ ...newProduct, quantity: e.target.value }),
+                                 setIsError(false),
+                                 setErrorMessage('')
+                           }}
+                           required
+                        />
+                        <Input
+                           type="text"
+                           placeholder="Criar Categoria ( roupa, tecnologia... )"
+                           value={categoryName}
+                           onChange={(e) => setCategoryName(e.target.value)}
+                        />
+                        <Select onValueChange={(value) => {
+                           setSelectedCategory(value),
+                              setIsError(false)
+                        }}>
+                           <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Selecione uma categoria" />
+                           </SelectTrigger>
+                           <SelectContent>
+                              <SelectGroup>
+                                 <SelectLabel>Categorias</SelectLabel>
+                                 <SelectItem value="none">Nenhum</SelectItem>
+                                 {categories && categories.map((c) => c.name ? (
+                                    <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                                 ) : null)}
+                              </SelectGroup>
+                           </SelectContent>
+                        </Select>
+                        <Button type="submit" className="w-full">
+                           Adicionar Produto
+                        </Button>
+                        {isError &&
+                           <p className="text-red-600 text-center text-sm">{errorMessage}</p>
+                        }
+                     </form>
+                  </CardContent>
+               </Card>
+               <Card className="size-80">
+                  <CardHeader>
+                     <CardTitle>Todas as categorias</CardTitle>
+                  </CardHeader>
+                  <CardContent className="overflow-y-scroll">
+                     <ul>
+                        {categories.map((c) => (
+                           <li key={c.id} className="flex justify-between mb-2">
+                              {c.name} - {categoryCounts[c.id] || 0} produtos
+                              <Trash2 fill="transparent" stroke="#fff" size={28}
+                                 className="mr-2 stroke-red-600 bg-transparent p-1 cursor-pointer rounded-md"
+                                 onClick={() => handleModalCategory(c)} />
+                           </li>
+                        ))}
+                     </ul>
+                  </CardContent>
+               </Card>
+            </div>
             <Table className="bg-white dark:bg-zinc-900 rounded-lg">
                <TableHeader>
                   <TableRow>
