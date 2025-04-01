@@ -4,25 +4,33 @@ import { ThemeToggle } from "./theme-toggle"
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
+import { useProfileStore } from "@/store/zustand";
 
 type props = {
    showAside: boolean;
    setShowAside: () => void;
 }
-export const Header = ({showAside, setShowAside}: props) => {
+export const Header = ({ showAside, setShowAside }: props) => {
    const router = useRouter();
    const pathname = usePathname();
    const [username, setUsername] = useState<string | null>(null);
    const [headerTitle, setHeaderTitle] = useState('');
+   const profileImage = useProfileStore((state) => state.profileImage);
+   const fetchImage = useProfileStore((state) => state.fetchImage);
 
    useEffect(() => {
       getUsername();
       setHeaderTitle(checkPathname());
+      fetchImage();
    }, []);
 
-   function checkPathname(){
-      switch(pathname){
-         case'/products':
+   useEffect(() => {
+      fetchImage();
+   }, [profileImage])
+
+   function checkPathname() {
+      switch (pathname) {
+         case '/products':
             return 'Produtos';
          case '/perfil':
             return 'Perfil';
@@ -61,13 +69,24 @@ export const Header = ({showAside, setShowAside}: props) => {
 
    return (
       <header className="bg-white dark:bg-black flex justify-between items-center px-5 sm:px-6 py-3 min-h-24 w-full transition">
-         <Menu onClick={() => setShowAside()} className="block sm:hidden"/>
+         <Menu onClick={() => setShowAside()} className="block sm:hidden" />
          <h1 className="text-2xl sm:text-3xl font-semibold text-emerald-600">{headerTitle}</h1>
          <div className="flex items-center gap-3">
             <ThemeToggle />
             <div className="flex items-center gap-2 p-2 max-w-40 rounded-xl cursor-pointer dark:bg-zinc-900 border border-zinc-400 dark:border-zinc-800 shadow-lg shadow-zinc-200 dark:shadow-black"
                onClick={handleGoPerfilPage}>
-                  <img className="size-9" src="avatar.jpg" alt="avatar usuario" />
+               {profileImage ? (
+                  <img
+                     src={profileImage ?? 'avatar.jpg'}
+                     alt="Foto de perfil"
+                     className="w-9 h-9 rounded-full object-cover border "
+                  />
+               ) : (
+                  <>
+                     <img className="size-9 rounded-full " src="avatar.jpg" alt="Adicionar Foto" />
+                     <span className="text-center text-sm">Adicionar foto</span>
+                  </>
+               )}
                <p>{username ?? "Carregando..."}</p>
             </div>
          </div>

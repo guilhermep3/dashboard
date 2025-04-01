@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase";
+import { useProfileStore } from "@/store/zustand";
 import { deleteCookie } from "cookies-next";
 import { LogOut } from "lucide-react";
 import Link from "next/link";
@@ -17,8 +18,9 @@ export default function Perfil() {
    const [createdAt, setCreatedAt] = useState<any>(null);
    const [email, setEmail] = useState<any>(null);
    const [isLoading, setIsLoading] = useState(true);
-   const [profileImage, setProfileImage] = useState<string>('avatar.jpg');
    const router = useRouter();
+   const profileImage = useProfileStore((state) => state.profileImage);
+   const fetchImage = useProfileStore((state) => state.fetchImage);
 
    useEffect(() => {
       getUsername();
@@ -95,40 +97,12 @@ export default function Perfil() {
 
          if (updateError) throw updateError;
 
-         setProfileImage(`${imageUrl}?${Date.now()}`); // Força recarregamento
          fetchImage();
       } catch (error) {
          console.error("Erro ao fazer upload:", error);
       }
    }
 
-   async function fetchImage() {
-      try {
-         const { data: { session } } = await supabase.auth.getSession();
-         if (!session) return;
-
-         const { data: userData, error } = await supabase.from("users")
-            .select("profile_image")
-            .eq("user_id", session.user.id)
-            .single()
-
-         if (error) {
-            console.log("Erro ao buscar avatar: ", error);
-            return;
-         }
-
-         console.log("Imagem encontrada:", userData?.profile_image);
-         // Atualiza o estado apenas se existir uma imagem
-         if (userData?.profile_image) {
-            setProfileImage(userData.profile_image);
-         } else {
-            setProfileImage('avatar.jpg');
-         }
-
-      } catch (error: any) {
-         console.log(error)
-      }
-   };
 
    async function handleLogOut() {
       const { error } = await supabase.auth.signOut();
@@ -166,19 +140,13 @@ export default function Perfil() {
                         <img
                            src={profileImage ?? 'avatar.jpg'}
                            alt="Foto de perfil"
-                           className="w-28 h-28 rounded-full object-cover border p-2"
-                           onError={() => {
-                              setProfileImage('avatar.jpg'); // Fallback se a imagem não carregar
-                            }}
+                           className="w-28 h-28 rounded-full object-cover border p-1"
                         />
                      ) : (
                         <>
                            <img className="size-28 rounded-full " src="avatar.jpg" alt="Adicionar Foto" />
                            <span className="text-center text-sm">Adicionar foto</span>
                         </>
-                        // <div className="bg-emerald-200 size-28 rounded-full flex items-center justify-center text-gray-500">
-                        //    Adicionar Foto
-                        // </div>
                      )}
                   </label>
                   <input
