@@ -25,7 +25,7 @@ const productSchema = z.object({
       .refine(value => !isNaN(parseInt(value)) && parseInt(value) > 0, "A quantidade deve ser um número válido."),
    sold: z.string()
       .trim()
-      .min(1, "A quantidade é obrigatória.")
+      .min(0, "A quantidade é obrigatória.")
       .refine(value => !isNaN(parseInt(value)) && parseInt(value) > 0, "A quantidade deve ser um número válido."),
    categoryName: z.string().optional(),
    selectedCategory: z.string().optional(),
@@ -59,7 +59,7 @@ export default function Products() {
       price: '',
       quantity: '',
       category_id: '',
-      sold: 1
+      sold: 0
    });
    const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
    const [selectedCategory, setSelectedCategory] = useState('');
@@ -109,14 +109,9 @@ export default function Products() {
       if (!userData.user) {
          return console.error("Usuário não autenticado!", errorGetUser);
       }
-      console.log("categoryName: ", categoryName.trim())
-      console.log("selectedCategory: ", selectedCategory)
 
       const isCreatingCategory = categoryName.trim() !== '';
       const isSelectingCategory = selectedCategory !== '' && selectedCategory !== 'none';
-
-      console.log("isCreatingCategory: ", isCreatingCategory)
-      console.log("isSelectingCategory: ", isSelectingCategory)
 
       if (!isCreatingCategory && !isSelectingCategory) {
          setErrorMessage("Preencha um dos campos de categoria.");
@@ -147,7 +142,6 @@ export default function Products() {
                setIsError(true);
                return;
             }
-            console.log("categoryName: ", categoryName)
             const { data: categoryData, error: categoryError } = await supabase
                .from("categories")
                .insert({ name: categoryName, user_id: userData.user.id })
@@ -184,8 +178,6 @@ export default function Products() {
                selectedCategory: selectedCategory,
                sold: newProduct.sold.toString()
             });
-            console.log("validatedData: ", validatedData)
-            console.log("selectedCategory: ", selectedCategory)
 
             const selectedCat = categories.find((c) => c.name === selectedCategory);
             if (!selectedCat) {
@@ -226,8 +218,10 @@ export default function Products() {
    async function handleDeleteProduct(id: string) {
       try {
          const { data, error } = await supabase.from("products").delete().eq('id', id);
-         await console.log(data)
-         if (error) throw error;
+         if (error) {
+            console.log("Erro ao deletar produto: ", error)
+            return
+         };
 
          setProducts(products.filter((product) => product.id !== id));
       } catch (error) {
@@ -237,14 +231,11 @@ export default function Products() {
    };
 
    async function handleUpdateProduct() {
-      console.log("modalProduct", modalProduct);
-
-      // Buscar o produto atualizado no banco
       const { data, error } = await supabase
          .from("products")
          .select("*")
          .eq("id", modalProduct?.id)
-         .single(); // Retorna apenas um objeto ao invés de um array
+         .single();
 
       if (error) {
          console.log("Erro ao buscar produto:", error);
@@ -252,12 +243,12 @@ export default function Products() {
       }
 
       const productToChange = data;
-
       // boolean
       const soldChanged = modalProduct!.sold !== productToChange.sold;
       const quantityChanged = modalProduct!.quantity !== productToChange.quantity;
-
+      const categoryChanged = selectedCategory !== productToChange.category_id;
       let newQuantity = productToChange.quantity;
+
       // se sold foi mudado, tira da quantidade o valor atualizado
       if (soldChanged) {
          const soldDifference = modalProduct!.sold - productToChange.sold;
@@ -268,24 +259,25 @@ export default function Products() {
          newQuantity = modalProduct!.quantity;
       }
 
-      try {
-         if (newQuantity < 0) {
-            setErrorMessage("Unidades vendidas não pode ser maior do que a quantia disponível.");
-            setIsError(true);
-            return;
-         } else {
-            const { error } = await supabase
-               .from("products")
-               .update({
-                  name: modalProduct?.name,
-                  price: modalProduct?.price,
-                  quantity: newQuantity,
-                  sold: modalProduct!.sold
-               })
-               .eq("id", modalProduct?.id);
+      if (newQuantity < 0) {
+         setErrorMessage("Unidades vendidas não pode ser maior do que a quantia disponível.");
+         setIsError(true);
+         return;
+      }
 
-            if (error) console.log("Erro ao atualizar:", error);
-         }
+      try {
+         const { error } = await supabase
+            .from("products")
+            .update({
+               name: modalProduct?.name,
+               price: modalProduct?.price,
+               quantity: newQuantity,
+               sold: modalProduct!.sold,
+               ...categoryChanged && { category_id: selectedCategory }
+            })
+            .eq("id", modalProduct?.id);
+
+         if (error) console.log("Erro ao atualizar:", error);
 
          setIsOpen(false);
          await fetchProducts();
@@ -312,10 +304,8 @@ export default function Products() {
    async function handleDeleteCategory(id: string) {
       try {
          const { data, error } = await supabase.from("categories").delete().eq('id', id);
-         console.log('data: ', data)
-         console.log('error: ', error)
          if (error) {
-            console.log("Erro ao deletar: ", error)
+            console.log("Erro ao deletar categoria: ", error)
             return;
          }
          setCategories(categories.filter(category => category.id !== id));
@@ -373,7 +363,6 @@ export default function Products() {
 
    const sortedProducts = [...products].sort((a, b) => {
       if (!sortColumn) return 0;
-
       const valueA = a[sortColumn];
       const valueB = b[sortColumn];
 
@@ -381,7 +370,6 @@ export default function Products() {
       if (typeof valueA === "string" && typeof valueB === "string") {
          return sortDirection === "asc" ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA);
       }
-
       // se for numero, ordene numericamente
       if (typeof valueA === "number" && typeof valueB === "number") {
          return sortDirection === "asc" ? valueA - valueB : valueB - valueA;
@@ -583,7 +571,7 @@ export default function Products() {
                      />
                   </div>
                   <div>
-                     <Select onValueChange={(value) => {
+                     <Select defaultValue={modalProduct?.category_id} onValueChange={(value) => {
                         setSelectedCategory(value),
                            setIsError(false)
                      }}>
@@ -594,7 +582,7 @@ export default function Products() {
                            <SelectGroup>
                               <SelectLabel>Categorias</SelectLabel>
                               {categories && categories.map((c) => c.name ? (
-                                 <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                               ) : null)}
                            </SelectGroup>
                         </SelectContent>

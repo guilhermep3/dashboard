@@ -17,11 +17,12 @@ export default function Perfil() {
    const [createdAt, setCreatedAt] = useState<any>(null);
    const [email, setEmail] = useState<any>(null);
    const [isLoading, setIsLoading] = useState(true);
-   const [profileImage, setProfileImage] = useState<any>(null);
+   const [profileImage, setProfileImage] = useState<string>('avatar.jpg');
    const router = useRouter();
 
    useEffect(() => {
       getUsername();
+      fetchImage();
    }, []);
 
    useEffect(() => {
@@ -29,11 +30,11 @@ export default function Perfil() {
    }, [profileImage]);
 
    async function getUsername() {
-      try {
-         const { data: { session } } = await supabase.auth.getSession();
-         if (!session) return;
-         const userId = session.user.id;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const userId = session.user.id;
 
+      try {
          const { data, error } = await supabase.from("users").select("*").eq("user_id", userId).single();
 
          if (error) {
@@ -49,7 +50,7 @@ export default function Perfil() {
             setIsLoading(false);
          }, 100);
       } catch (error) {
-         console.log('Erro no getSession: ', error);
+         console.log('Erro no users: ', error);
       };
    };
 
@@ -64,45 +65,76 @@ export default function Perfil() {
 
    async function uploadProfileImage(file: File) {
       if (!file) return;
-   
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
       try {
-         const { data: { session } } = await supabase.auth.getSession();
-         if (!session) return;
-   
-         const fileName = `${session.user.id}-${Date.now()}`;
-         // Guarda a imagem no Supabase
-         const { data, error } = await supabase.storage
+         // Nome do arquivo baseado no ID do usuário (sempre o mesmo)
+         const fileName = `${session.user.id}-profile`;
+         await supabase.storage.from("avatars").remove([fileName]);
+
+         // Sobrescreve a imagem existente (usando upsert: true)
+         const { error } = await supabase.storage
             .from("avatars")
-            .upload(fileName, file, { cacheControl: "3600", upsert: true });
-   
+            .upload(fileName, file, { cacheControl: "no-store", upsert: true });
+
          if (error) throw error;
-   
-         // Obtém a URL pública
+
+         // Obtém a URL pública (já atualizada)
          const { data: urlData } = await supabase.storage
             .from("avatars")
             .getPublicUrl(fileName);
-   
-         const imageUrl = urlData.publicUrl;
-   
-         // Atualiza na tabela users
+
+         const imageUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
+         // Atualiza a URL na tabela users
          const { error: updateError } = await supabase
             .from("users")
             .update({ profile_image: imageUrl })
             .eq("user_id", session.user.id);
-   
+
          if (updateError) throw updateError;
-   
-         setProfileImage(imageUrl);
+
+         setProfileImage(`${imageUrl}?${Date.now()}`); // Força recarregamento
+         fetchImage();
       } catch (error) {
          console.error("Erro ao fazer upload:", error);
       }
    }
 
+   async function fetchImage() {
+      try {
+         const { data: { session } } = await supabase.auth.getSession();
+         if (!session) return;
+
+         const { data: userData, error } = await supabase.from("users")
+            .select("profile_image")
+            .eq("user_id", session.user.id)
+            .single()
+
+         if (error) {
+            console.log("Erro ao buscar avatar: ", error);
+            return;
+         }
+
+         console.log("Imagem encontrada:", userData?.profile_image);
+         // Atualiza o estado apenas se existir uma imagem
+         if (userData?.profile_image) {
+            setProfileImage(userData.profile_image);
+         } else {
+            setProfileImage('avatar.jpg');
+         }
+
+      } catch (error: any) {
+         console.log(error)
+      }
+   };
+
    async function handleLogOut() {
       const { error } = await supabase.auth.signOut();
       router.push('/signin')
       await deleteCookie('token')
-   }
+   };
 
 
    return (
@@ -135,6 +167,9 @@ export default function Perfil() {
                            src={profileImage ?? 'avatar.jpg'}
                            alt="Foto de perfil"
                            className="w-28 h-28 rounded-full object-cover border p-2"
+                           onError={() => {
+                              setProfileImage('avatar.jpg'); // Fallback se a imagem não carregar
+                            }}
                         />
                      ) : (
                         <>
