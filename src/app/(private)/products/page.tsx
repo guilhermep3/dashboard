@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/lib/supabase";
-import { Pen, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Pen, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { z } from "zod";
@@ -20,6 +20,10 @@ const productSchema = z.object({
       .min(1, "O preço é obrigatório.")
       .refine(value => !isNaN(parseFloat(value)) && parseFloat(value) > 0, "O preço deve ser um número válido."),
    quantity: z.string()
+      .trim()
+      .min(1, "A quantidade é obrigatória.")
+      .refine(value => !isNaN(parseInt(value)) && parseInt(value) > 0, "A quantidade deve ser um número válido."),
+   sold: z.string()
       .trim()
       .min(1, "A quantidade é obrigatória.")
       .refine(value => !isNaN(parseInt(value)) && parseInt(value) > 0, "A quantidade deve ser um número válido."),
@@ -41,6 +45,7 @@ interface Product {
    price: number;
    quantity: number;
    category_id?: any;
+   sold: number;
 }
 export default function Products() {
    const router = useRouter();
@@ -53,7 +58,8 @@ export default function Products() {
       name: '',
       price: '',
       quantity: '',
-      category_id: ''
+      category_id: '',
+      sold: 1
    });
    const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
    const [selectedCategory, setSelectedCategory] = useState('');
@@ -129,7 +135,8 @@ export default function Products() {
                name: newProduct.name,
                price: newProduct.price,
                quantity: newProduct.quantity,
-               categoryName: categoryName
+               categoryName: categoryName,
+               sold: newProduct.sold.toString()
             })
 
             const alreadyHaveCategory = categories.some(
@@ -160,6 +167,7 @@ export default function Products() {
                quantity: parseInt(validatedData.quantity),
                category_id: categoryId,
                user_id: userData.user.id,
+
             });
 
             fetchCategories();
@@ -173,7 +181,8 @@ export default function Products() {
                name: newProduct.name,
                price: newProduct.price,
                quantity: newProduct.quantity,
-               selectedCategory: selectedCategory
+               selectedCategory: selectedCategory,
+               sold: newProduct.sold.toString()
             });
             console.log("validatedData: ", validatedData)
             console.log("selectedCategory: ", selectedCategory)
@@ -203,7 +212,7 @@ export default function Products() {
                return console.error("Erro ao adicionar produto:", error);
             }
          }
-         setNewProduct({ name: "", price: "", quantity: "", category_id: "" });
+         setNewProduct({ name: "", price: "", quantity: "", category_id: "", sold: 0 });
          setCategoryName("");
          fetchProducts();
          setIsError(false);
@@ -228,22 +237,64 @@ export default function Products() {
    };
 
    async function handleUpdateProduct() {
-      console.log("modalProduct", modalProduct)
-      try {
-         const { data, error } = await supabase.from("products").update({
-            name: modalProduct?.name,
-            price: modalProduct?.price,
-            quantity: modalProduct?.quantity
-         }).eq("id", modalProduct?.id)
+      console.log("modalProduct", modalProduct);
 
-         if (error) console.log("erro: ", error);
+      // Buscar o produto atualizado no banco
+      const { data, error } = await supabase
+         .from("products")
+         .select("*")
+         .eq("id", modalProduct?.id)
+         .single(); // Retorna apenas um objeto ao invés de um array
+
+      if (error) {
+         console.log("Erro ao buscar produto:", error);
+         return;
+      }
+
+      const productToChange = data;
+
+      // boolean
+      const soldChanged = modalProduct!.sold !== productToChange.sold;
+      const quantityChanged = modalProduct!.quantity !== productToChange.quantity;
+
+      let newQuantity = productToChange.quantity;
+      // se sold foi mudado, tira da quantidade o valor atualizado
+      if (soldChanged) {
+         const soldDifference = modalProduct!.sold - productToChange.sold;
+         newQuantity -= soldDifference;
+      }
+      // se a quantidade foi alterada, atualize o valor sem calcular com as vendas
+      if (quantityChanged) {
+         newQuantity = modalProduct!.quantity;
+      }
+
+      try {
+         if (newQuantity < 0) {
+            setErrorMessage("Unidades vendidas não pode ser maior do que a quantia disponível.");
+            setIsError(true);
+            return;
+         } else {
+            const { error } = await supabase
+               .from("products")
+               .update({
+                  name: modalProduct?.name,
+                  price: modalProduct?.price,
+                  quantity: newQuantity,
+                  sold: modalProduct!.sold
+               })
+               .eq("id", modalProduct?.id);
+
+            if (error) console.log("Erro ao atualizar:", error);
+         }
+
          setIsOpen(false);
-         fetchProducts();
+         await fetchProducts();
       } catch (error) {
-         console.log('Erro ao atualizar o produto: ', error)
+         console.log("Erro ao atualizar o produto: ", error);
       }
       setIsOpen(false);
-   };
+   }
+
 
    async function fetchCategories() {
       const { data, error } = await supabase
@@ -310,16 +361,6 @@ export default function Products() {
       return acc;
    }, {} as Record<string, number>);
 
-
-   function handleSort2(column: keyof Product) {
-      if (sortColumn === column) {
-         setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-      } else {
-         setSortColumn(column);
-         setSortDirection("asc");
-      }
-   };
-
    const handleSort = (column: keyof Product) => {
       if (sortColumn === column) {
          // se a coluna a ser ordenada é a atual, inverta o sentido
@@ -352,7 +393,7 @@ export default function Products() {
    return (
       <div className="p-5 pb-10 w-full max-w-[1200px] mx-auto">
          <h1 className="mb-5">Seus Produtos</h1>
-         <div className="grid gap-5 grid-cols-1">
+         <div className="grid gap-8 grid-cols-1">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                <Card className="w-full max-w-96">
                   <CardHeader>
@@ -425,11 +466,11 @@ export default function Products() {
                      </form>
                   </CardContent>
                </Card>
-               <Card className="size-80">
+               <Card className="w-80">
                   <CardHeader>
                      <CardTitle>Todas as categorias</CardTitle>
                   </CardHeader>
-                  <CardContent className="overflow-y-scroll">
+                  <CardContent className="overflow-y-scroll mr-3">
                      <ul>
                         {categories.map((c) => (
                            <li key={c.id} className="flex justify-between mb-2">
@@ -447,16 +488,19 @@ export default function Products() {
                <TableHeader>
                   <TableRow>
                      <TableHead className="p-3 cursor-pointer" onClick={() => handleSort("name")}>
-                        Nome {sortColumn === "name" ? (sortDirection === "asc" ? "▲" : "▼") : ""}
+                        <p className="flex gap-1">Nome {sortColumn === "name" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
                      </TableHead>
                      <TableHead className="cursor-pointer" onClick={() => handleSort("category_id")}>
-                        Categoria {sortColumn === "category_id" ? (sortDirection === "asc" ? "▲" : "▼") : ""}
+                        <p className="flex gap-1">Categoria  {sortColumn === "category_id" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
                      </TableHead>
                      <TableHead className="cursor-pointer" onClick={() => handleSort("price")}>
-                        Preço {sortColumn === "price" ? (sortDirection === "asc" ? "▲" : "▼") : ""}
+                        <p className="flex gap-1">Preço  {sortColumn === "price" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
                      </TableHead>
                      <TableHead className="cursor-pointer" onClick={() => handleSort("quantity")}>
-                        Quantidade {sortColumn === "quantity" ? (sortDirection === "asc" ? "▲" : "▼") : ""}
+                        <p className="flex gap-1">Quantidade  {sortColumn === "quantity" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
+                     </TableHead>
+                     <TableHead className="cursor-pointer" onClick={() => (handleSort("sold"), handleUpdateProduct)}>
+                        <p className="flex gap-1">Vendidos  {sortColumn === "sold" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
                      </TableHead>
                      <TableHead>Ações</TableHead>
                   </TableRow>
@@ -475,6 +519,7 @@ export default function Products() {
                            </TableCell>
                            <TableCell>R$ {product.price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
                            <TableCell>{product.quantity.toLocaleString("pt-BR")}</TableCell>
+                           <TableCell>{product.sold}</TableCell>
                            <TableCell className="flex">
                               <Trash2 fill="transparent" stroke="#fff" size={28}
                                  className="mr-2 bg-red-600 p-1 cursor-pointer rounded-md"
@@ -528,8 +573,36 @@ export default function Products() {
                      />
                   </div>
                   <div>
-                     editar grupo
+                     <Label htmlFor="modalSold" className="mb-1 text-base">Vendidos</Label>
+                     <Input id="modalSold"
+                        type="number"
+                        placeholder="Quantidade vendida"
+                        value={modalProduct?.sold}
+                        onChange={(e) => setModalProduct({ ...modalProduct!, sold: Number(e.target.value) })}
+                        required
+                     />
                   </div>
+                  <div>
+                     <Select onValueChange={(value) => {
+                        setSelectedCategory(value),
+                           setIsError(false)
+                     }}>
+                        <SelectTrigger className="w-full">
+                           <SelectValue placeholder="Selecione uma categoria" />
+                        </SelectTrigger>
+                        <SelectContent>
+                           <SelectGroup>
+                              <SelectLabel>Categorias</SelectLabel>
+                              {categories && categories.map((c) => c.name ? (
+                                 <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                              ) : null)}
+                           </SelectGroup>
+                        </SelectContent>
+                     </Select>
+                  </div>
+                  {isError &&
+                     <p className="text-red-600 text-center text-sm">{errorMessage}</p>
+                  }
                </form>
                <div className="flex justify-center gap-3">
                   <Button onClick={handleUpdateProduct}>Confirmar</Button>

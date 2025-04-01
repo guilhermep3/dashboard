@@ -62,12 +62,12 @@ export const Header = ({showAside, setShowAside}: props) => {
    return (
       <header className="bg-white dark:bg-black flex justify-between items-center px-5 sm:px-6 py-3 min-h-24 w-full transition">
          <Menu onClick={() => setShowAside()} className="block sm:hidden"/>
-         <h1 className="text-2xl sm:text-3xl font-semibold">{headerTitle}</h1>
+         <h1 className="text-2xl sm:text-3xl font-semibold text-emerald-600">{headerTitle}</h1>
          <div className="flex items-center gap-3">
             <ThemeToggle />
             <div className="flex items-center gap-2 p-2 max-w-40 rounded-xl cursor-pointer dark:bg-zinc-900 border border-zinc-400 dark:border-zinc-800 shadow-lg shadow-zinc-200 dark:shadow-black"
                onClick={handleGoPerfilPage}>
-               <div className="border-2 bg-emerald-100 border-emerald-600 rounded-full size-10"></div>
+                  <img className="size-9" src="avatar.jpg" alt="avatar usuario" />
                <p>{username ?? "Carregando..."}</p>
             </div>
          </div>

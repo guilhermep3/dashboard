@@ -18,7 +18,6 @@ export default function Perfil() {
    const [email, setEmail] = useState<any>(null);
    const [isLoading, setIsLoading] = useState(true);
    const [profileImage, setProfileImage] = useState<any>(null);
-   const [showModal, setShowModal] = useState(false);
    const router = useRouter();
 
    useEffect(() => {

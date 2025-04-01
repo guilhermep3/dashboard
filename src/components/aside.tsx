@@ -51,6 +51,7 @@ export const Aside = ({ showAside, setShowAside }: props) => {
       setAcitveAsideItem(itemId);
       let pathname = checkPathName(itemId);
       router.push(pathname);
+      setShowAside();
    }
 
    return (
