@@ -11,6 +11,9 @@ import { BestSellersChart } from "@/components/charts/bestSellersChart";
 import { WorstSellersChart } from "@/components/charts/worstSellers";
 import { DollarSign } from "lucide-react";
 import Products from "./(private)/products/page";
+import { Card } from "@/components/ui/card";
+import { DashboardCard } from "@/components/charts/dashboardCard";
+import { ProfitCategoryChart } from "@/components/charts/profitCategoryCharts";
 
 export default function Home() {
    const [formattedData, setFormattedData] = useState<Product[]>([]);
@@ -32,16 +35,26 @@ export default function Home() {
 
          console.log("dados puros: ", data);
 
+         async function fetchCategories() {
+            const { data, error } = await supabase.from("categories").select("*");
+            if (error) throw error;
+            return data;
+         }
+         const categories = await fetchCategories()
+         console.log("categories: ", categories)
+
          const formatted = data.map((p) => ({
             name: p.name,
             price: p.price,
             cost: p.cost,
             quantity: p.quantity,
             sold: p.sold,
+            category: categories.find((c) => c.id === p.category_id)?.name,
             created_at: new Date(p.created_at).toLocaleString("pt-BR", {
                month: "long",
                year: "numeric",
             }),
+            category_id: p.category_id
          }));
 
          setFormattedData(formatted);
@@ -76,38 +89,48 @@ export default function Home() {
    const avgProductsPerMonth = monthsCount > 0 ? totalQuantity / monthsCount : 0;
    const avgSoldPerMonth = monthsCount > 0 ? totalSold / monthsCount : 0;
 
+   const soldByCategory = formattedData.reduce((acc, product) => {
+      // Verifica se a categoria já existe no acumulador (acc)
+      if (!acc[product.category_id]) {
+         // Se não existir, inicializa a categoria no acumulador com `totalSold` zerado
+         acc[product.category_id] = {
+            category: product.category,
+            totalSold: 0,
+            totalQuantity: 0
+         };
+      }
+      // Adiciona a quantidade vendida do produto ao total da categoria correspondente
+      acc[product.category_id].totalSold += product.sold;
+      acc[product.category_id].totalQuantity += product.quantity;
+
+      // Retorna o acumulador atualizado para a próxima iteração
+      return acc;
+   }, {} as Record<string, { category: string; totalSold: number, totalQuantity: number }>);
+
+   // Convertendo o objeto para um array para facilitar a exibição
+   const formattedSortByCategory = Object.values(soldByCategory).sort((a, b) => b.totalSold - a.totalSold);
+
+   console.log("Categorias mais vendidas:", formattedSortByCategory);
+
+
    return (
       <div>
          <div className="w-full max-w-[1200px] mx-auto p-5">
             <h1 className="mb-5">Dashboard</h1>
             <div className="grid grid-cols-1 min-h-[80vh] gap-10">
                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 items-start">
-                  <div className="flex justify-center items-center flex-col flex-1 text-center h-44 rounded-xl p-2 bg-emerald-100 dark:bg-emerald-950 border border-emerald-600">
-                     <p className="flex gap-1 text-lg"><DollarSign /> Faturamento total</p>
-                     <p className="text-2xl font-semibold my-3">
-                        {totalInvoicing.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                     </p>
-                     <p className="text-sm text-zinc-700 dark:text-zinc-400">Soma do valor de todas as vendas realizadas, sem considerar os custos.</p>
-                  </div>
-                  <div className="flex justify-center items-center flex-col flex-1 text-center h-44 rounded-xl p-2 bg-emerald-50 dark:bg-emerald-950 border border-emerald-600">
-                     <p className="flex gap-1 text-lg"><DollarSign /> Lucro total</p>
-                     <p className="text-2xl font-semibold my-3">{totalProfit}</p>
-                     <p className="text-sm text-zinc-700 dark:text-zinc-400">Valor restante após descontar os custos do faturamento total.</p>
-                  </div>
-                  <div className="flex justify-center items-center flex-col flex-1 text-center h-44 rounded-xl p-2 bg-emerald-50 dark:bg-emerald-950 border border-emerald-600">
-                     <p className="flex gap-1 text-lg"><DollarSign /> Custo total</p>
-                     <p className="text-2xl font-semibold my-3">
-                        {totalCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                     </p>
-                     <p className="text-sm text-zinc-700 dark:text-zinc-400">Soma dos custos de todos os produtos vendidos.</p>
-                  </div>
-                  <div className="flex justify-center items-center flex-col flex-1 text-center h-44 rounded-xl p-2 bg-emerald-50 dark:bg-emerald-950 border border-emerald-600">
-                     <p className="flex gap-1 text-lg"><DollarSign /> Preço total</p>
-                     <p className="text-center text-2xl font-semibold my-3">
-                        {totalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                     </p>
-                     <p className="text-sm text-zinc-700 dark:text-zinc-400">Soma do preço de venda de todos os produtos comercializados.</p>
-                  </div>
+                  <DashboardCard data={totalInvoicing}
+                     title="Faturamento total"
+                     description="Soma do valor de todas as vendas realizadas, sem considerar os custos." />
+                  <DashboardCard data={totalProfit}
+                     title="Lucro total"
+                     description="Valor restante após descontar os custos do faturamento total." />
+                  <DashboardCard data={totalCost}
+                     title="Custo total"
+                     description="Soma dos custos de todos os produtos vendidos." />
+                  <DashboardCard data={totalPrice}
+                     title="Preço total"
+                     description="Soma do preço de venda de todos os produtos comercializados." />
                </div>
                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 items-start">
                   {isLoading ? <Skeleton />
@@ -117,6 +140,9 @@ export default function Home() {
                      : <SoldMonthChart products={formattedChartData}
                         avgProductsPerMonth={avgProductsPerMonth}
                         avgSoldPerMonth={avgSoldPerMonth} />
+                  }
+                  {isLoading ? <Skeleton h="300px" />
+                     : <ProfitCategoryChart formattedSortByCategory={formattedSortByCategory} />
                   }
                </div>
                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
