@@ -8,12 +8,12 @@ import { Loading } from "@/components/loading";
 import { Skeleton } from "@/components/skeleton";
 import { supabase } from "@/lib/supabase";
 import { Product } from "@/types/product";
+import { Footer } from "@/components/footer";
+import { BarChartVComponent } from "@/components/charts/barChartV";
+import { BarChartVLess } from "@/components/charts/barChartVLess";
 
 export default function Home() {
-   const [productsData, setProductsData] = useState<Product[]>([]);
-   const [products, setProducts] = useState<Partial<Product[]>>([]);
-   const [productsByMonth, setProductsByMonth] = useState<Record<string, any[]>>({});
-   const [chartData, setChartData] = useState<any[]>([]);
+   const [formattedData, setFormattedData] = useState<Product[]>([]);
    const [isLoading, setIsLoading] = useState(true);
 
    useEffect(() => {
@@ -29,10 +29,10 @@ export default function Home() {
             .order("created_at", { ascending: false });
 
          if (error) throw error;
-         console.log("dados puros: ", data);
-         setProductsData(data || []);
 
-         const formattedData = data?.map((p) => ({
+         console.log("dados puros: ", data);
+
+         const formatted = data.map((p) => ({
             name: p.name,
             price: p.price,
             quantity: p.quantity,
@@ -41,53 +41,62 @@ export default function Home() {
                month: "long",
                year: "numeric",
             }),
-         })) || [];
+         }));
 
-         const groupedData = groupByMonth(formattedData);
-         setProductsByMonth(groupedData);
-         setChartData(formatChartData(groupedData));
-         setProducts(formattedData);
-         console.log("formatChartData(groupedData): ", formatChartData(groupedData))
+         setFormattedData(formatted);
       } catch (error: any) {
          console.error("Erro ao buscar produtos:", error);
       }
    }
 
-   function groupByMonth(products: any[]) {
-      return products.reduce((acc, product) => {
-         const month = product.created_at;
-         if (!acc[month]) acc[month] = [];
-         acc[month].push(product);
-         return acc;
-      }, {} as Record<string, any[]>);
-   }
+   // Agrupamento por mês
+   const productsByMonth = formattedData.reduce((acc, product) => {
+      const month = product.created_at;
+      if (!acc[month]) acc[month] = [];
+      acc[month].push(product);
+      return acc;
+   }, {} as Record<string, Product[]>);
 
-   function formatChartData(productsByMonth: Record<string, any[]>) {
-      return Object.entries(productsByMonth).map(([month, products]) => ({
-         month,
-         quantity: products.reduce((acc, p) => acc + p.quantity, 0),
-         sold: products.reduce((acc, p) => acc + p.sold, 0),
-      }));
-   }
+   const formattedChartData = Object.entries(productsByMonth).map(([month, products]) => ({
+      month,
+      quantity: products.reduce((acc, p) => acc + p.quantity, 0),
+      sold: products.reduce((acc, p) => acc + p.sold, 0),
+   }));
 
-   const totalQuantity = productsData.reduce((acc, product) => acc + product.quantity, 0);
-   const totalSold = productsData.reduce((acc, product) => acc + product.sold, 0);
-
-   const monthsCount = Object.keys(chartData).length;
+   // Dados de totais
+   const totalQuantity = formattedData.reduce((acc, product) => acc + product.quantity, 0);
+   const totalSold = formattedData.reduce((acc, product) => acc + product.sold, 0);
+   const monthsCount = Object.keys(productsByMonth).length;
    const avgProductsPerMonth = monthsCount > 0 ? totalQuantity / monthsCount : 0;
    const avgSoldPerMonth = monthsCount > 0 ? totalSold / monthsCount : 0;
 
    return (
-      <div className="p-5 w-full max-w-[1200px] mx-auto">
-         <h1 className="mb-5">Dashboard</h1>
-         <div className="grid grid-cols-1">
-            <div className="grid items-start grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-               {isLoading ? <Skeleton /> : <PieChartComponent totalQuantity={totalQuantity} totalSold={totalSold} />}
-               {isLoading ? <Skeleton h="300px" /> 
-                  : <BarChartComponent products={chartData} avgProductsPerMonth={avgProductsPerMonth} avgSoldPerMonth={avgSoldPerMonth} />
-               }
+      <div>
+         <div className="w-full max-w-[1200px] mx-auto p-5">
+            <h1 className="mb-5">Dashboard</h1>
+            <div className="grid grid-cols-1 min-h-[80vh] gap-10">
+               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 items-start">
+                  {isLoading ? <Skeleton />
+                     : <PieChartComponent totalQuantity={totalQuantity} totalSold={totalSold} />
+                  }
+                  {isLoading ? <Skeleton h="300px" />
+                     : <BarChartComponent products={formattedChartData}
+                        avgProductsPerMonth={avgProductsPerMonth}
+                        avgSoldPerMonth={avgSoldPerMonth} />
+                  }
+               </div>
+               <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                  {isLoading ? <Skeleton />
+                     : <BarChartVComponent bestSellers={formattedData.sort((a, b) => b.sold - a.sold).slice(0, 5)} />
+                  }
+                  {isLoading ? <Skeleton />
+                     : <BarChartVLess bestSellers={formattedData.sort((a, b) => b.sold + a.sold).slice(0, 5)} />
+                  }
+
+               </div>
             </div>
          </div>
+         <Footer />
       </div>
    );
 }

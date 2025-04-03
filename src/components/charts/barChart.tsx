@@ -39,7 +39,7 @@ export function BarChartComponent({ products, avgProductsPerMonth, avgSoldPerMon
 
 
   return (
-    <Card>
+    <Card className="flex flex-col shadow-lg hover:border-emerald-300 dark:hover:border-emerald-900 transition">
       <CardHeader>
         <CardTitle className="text-base sm:text-lg">Vendas por mês</CardTitle>
         <CardDescription>Total de quantidade e vendas por mês</CardDescription>

@@ -1,5 +1,6 @@
 "use client"
 
+import { Footer } from "@/components/footer";
 import { Loading } from "@/components/loading";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -129,77 +130,80 @@ export default function Perfil() {
    }
 
    return (
-      <div className="p-5 w-full max-w-[1200px] mx-auto">
-         <h1 className="mb-5">Seu Perfil</h1>
-         <div className="grid gap-5 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
-            <Card className="relative px-7 flex flex-col items-center">
-               <Dialog>
-                  <DialogTrigger className="absolute left-5 top-5 cursor-pointer" title="Sair da conta">
-                     <LogOut className="rotate-180" />
-                  </DialogTrigger>
-                  <DialogContent>
-                     <DialogHeader>
-                        <DialogTitle className="text-center">
-                           Tem certeza que deseja sair da sua conta?
-                        </DialogTitle>
-                     </DialogHeader>
-                     <div className="flex justify-center gap-5 mt-3">
-                        <Button onClick={handleLogOut}>Confirmar</Button>
-                        <DialogClose>
-                           <Button variant={"destructive"}>Cancelar</Button>
-                        </DialogClose>
+      <div>
+         <div className="p-5 w-full max-w-[1300px] mx-auto">
+            <h1 className="mb-5">Seu Perfil</h1>
+            <div className="grid items-start gap-5 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 min-h-[80vh]">
+               <Card className="relative px-7 flex flex-col items-center">
+                  <Dialog>
+                     <DialogTrigger className="absolute left-5 top-5 cursor-pointer" title="Sair da conta">
+                        <LogOut className="rotate-180" />
+                     </DialogTrigger>
+                     <DialogContent>
+                        <DialogHeader>
+                           <DialogTitle className="text-center">
+                              Tem certeza que deseja sair da sua conta?
+                           </DialogTitle>
+                        </DialogHeader>
+                        <div className="flex justify-center gap-5 mt-3">
+                           <Button onClick={handleLogOut}>Confirmar</Button>
+                           <DialogClose>
+                              <Button variant={"destructive"}>Cancelar</Button>
+                           </DialogClose>
+                        </div>
+                     </DialogContent>
+                  </Dialog>
+                  <CardHeader className="flex flex-col justify-center items-center text-center w-full">
+                     <label htmlFor="fileInput" className="cursor-pointer">
+                        {profileImage ? (
+                           <img
+                              src={profileImage ?? 'avatar.jpg'}
+                              alt="Foto de perfil"
+                              className="w-44 h-44 rounded-full object-cover border"
+                           />
+                        ) : (
+                           <>
+                              <img className="size-44 rounded-full " src="avatar.jpg" alt="Adicionar Foto" />
+                              <span className="text-center text-sm">Adicionar foto</span>
+                           </>
+                        )}
+                     </label>
+                     <input
+                        id="fileInput"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleGetImage}
+                     />
+                     <CardTitle className="text-xl font-semibold mt-3">{username}</CardTitle>
+                     <CardDescription>Empresa: {company}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="w-full text-center">
+                     <div>
+                        <p className="font-semibold">Email:</p>
+                        <p className="text-zinc-700 dark:text-zinc-300">{email}</p>
                      </div>
-                  </DialogContent>
-               </Dialog>
-               <CardHeader className="flex flex-col justify-center items-center text-center w-full">
-                  <label htmlFor="fileInput" className="cursor-pointer">
-                     {profileImage ? (
-                        <img
-                           src={profileImage ?? 'avatar.jpg'}
-                           alt="Foto de perfil"
-                           className="w-44 h-44 rounded-full object-cover border"
-                        />
-                     ) : (
-                        <>
-                           <img className="size-44 rounded-full " src="avatar.jpg" alt="Adicionar Foto" />
-                           <span className="text-center text-sm">Adicionar foto</span>
-                        </>
-                     )}
-                  </label>
-                  <input
-                     id="fileInput"
-                     type="file"
-                     accept="image/*"
-                     className="hidden"
-                     onChange={handleGetImage}
-                  />
-                  <CardTitle className="text-xl font-semibold mt-3">{username}</CardTitle>
-                  <CardDescription>Empresa: {company}</CardDescription>
-               </CardHeader>
-               <CardContent className="w-full text-center">
-                  <div>
-                     <p className="font-semibold">Email:</p>
-                     <p className="text-zinc-700 dark:text-zinc-300">{email}</p>
-                  </div>
-               </CardContent>
-            </Card>
-            <Card className="w-full min-w-56 max-w-96">
-               <CardHeader>
-                  <CardTitle>Produtos</CardTitle>
-                  <CardDescription>Os cinco mais vendidos</CardDescription>
-               </CardHeader>
-               <CardContent className="flex flex-col h-full">
-                  <ul className="mb-5">
-                     {products.slice(0, 5).map((p) => (
-                        <li className="mb-2 flex justify-between gap-3"><p>{p?.name}</p> <span>{p?.sold} vendas</span></li>
-                     ))}
-                  </ul>
-                  <Button className=" w-full mt-auto">
-                     <Link href={'/products'}>Ver todos</Link>
-                  </Button>
-               </CardContent>
-            </Card>
+                  </CardContent>
+               </Card>
+               <Card className="w-full min-w-56 max-w-96">
+                  <CardHeader>
+                     <CardTitle>Produtos</CardTitle>
+                     <CardDescription>Os cinco mais vendidos</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-col h-full">
+                     <ul className="mb-5">
+                        {products.slice(0, 5).map((p) => (
+                           <li className="mb-2 flex justify-between gap-3"><p>{p?.name}</p> <span>{p?.sold} vendas</span></li>
+                        ))}
+                     </ul>
+                     <Button className=" w-full mt-auto">
+                        <Link href={'/products'}>Ver todos</Link>
+                     </Button>
+                  </CardContent>
+               </Card>
+            </div>
          </div>
+         <Footer/>
       </div>
    )
 }

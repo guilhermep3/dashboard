@@ -42,7 +42,7 @@ export function PieChartComponent({ totalQuantity, totalSold }: props) {
    } satisfies ChartConfig
 
    return (
-      <Card className="flex flex-col">
+      <Card className="flex flex-col shadow-lg hover:border-emerald-300 dark:hover:border-emerald-900 transition">
          <CardHeader className="items-center pb-0">
             <CardTitle className="text-base sm:text-lg">Vendas totais dos produtos</CardTitle>
             <CardDescription>Soma de todos os produtos</CardDescription>
@@ -97,7 +97,7 @@ export function PieChartComponent({ totalQuantity, totalSold }: props) {
                </PieChart>
             </ChartContainer>
          </CardContent>
-         <CardFooter className="flex-col gap-2 text-sm">
+         <CardFooter className="flex-col gap-2 text-sm text-center">
             <div className="flex items-center gap-2 font-medium leading-none">
                {(totalSold / totalQuantity * 100).toFixed(2)}% dos produtos foram vendidos
             </div>

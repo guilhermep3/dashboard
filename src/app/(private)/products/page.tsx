@@ -1,4 +1,5 @@
 "use client"
+import { Footer } from "@/components/footer";
 import { Loading } from "@/components/loading";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -236,7 +237,7 @@ export default function Products() {
       const soldChanged = modalProduct!.sold !== productToChange.sold;
       const quantityChanged = modalProduct!.quantity !== productToChange.quantity;
       let categoryChanged = selectedCategory !== productToChange.category_id;
-      if(!selectedCategory){
+      if (!selectedCategory) {
          categoryChanged = false
       }
       let newQuantity = productToChange.quantity;
@@ -258,9 +259,9 @@ export default function Products() {
       }
 
       try {
-         console.log("selectedCategory: ",selectedCategory)
-         console.log("productToChange.category_id: ",productToChange.category_id)
-         console.log("categoryChanged: ",categoryChanged)
+         console.log("selectedCategory: ", selectedCategory)
+         console.log("productToChange.category_id: ", productToChange.category_id)
+         console.log("categoryChanged: ", categoryChanged)
          const { error } = await supabase
             .from("products")
             .update({
@@ -373,56 +374,200 @@ export default function Products() {
    });
 
    return (
-      <div className="p-5 pb-10 w-full max-w-[1200px] mx-auto">
-         <h1 className="mb-5">Seus Produtos</h1>
-         <div className="grid gap-8 grid-cols-1">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-               <Card className="w-full max-w-96">
-                  <CardHeader>
-                     <CardTitle className="text-lg">Adicionar Produto</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                     <form onSubmit={handleAddProduct} className="space-y-4">
-                        <Input
-                           placeholder="Nome do produto"
-                           value={newProduct.name}
-                           onChange={(e) => {
-                              setNewProduct({ ...newProduct, name: e.target.value }),
-                                 setIsError(false),
-                                 setErrorMessage('')
-                           }}
-                           required
-                        />
-                        <Input
-                           type="number"
-                           step="0.01"
-                           placeholder="Preço"
-                           value={newProduct.price}
-                           onChange={(e) => {
-                              setNewProduct({ ...newProduct, price: e.target.value }),
-                                 setIsError(false),
-                                 setErrorMessage('')
-                           }}
-                           required
-                        />
-                        <Input
-                           type="number"
-                           placeholder="Quantidade"
-                           value={newProduct.quantity}
-                           onChange={(e) => {
-                              setNewProduct({ ...newProduct, quantity: e.target.value }),
-                                 setIsError(false),
-                                 setErrorMessage('')
-                           }}
-                           required
-                        />
-                        <Input
+      <div>
+         <div className="p-5 pb-10 w-full max-w-[1300px] mx-auto">
+            <h1 className="mb-5">Seus Produtos</h1>
+            <div className="grid gap-8 grid-cols-1">
+               <div className="grid items-start grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Card className="w-full max-w-96">
+                     <CardHeader>
+                        <CardTitle className="text-lg">Adicionar Produto</CardTitle>
+                     </CardHeader>
+                     <CardContent>
+                        <form onSubmit={handleAddProduct} className="space-y-4">
+                           <Input
+                              placeholder="Nome do produto"
+                              value={newProduct.name}
+                              onChange={(e) => {
+                                 setNewProduct({ ...newProduct, name: e.target.value }),
+                                    setIsError(false),
+                                    setErrorMessage('')
+                              }}
+                              required
+                           />
+                           <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="Preço"
+                              value={newProduct.price}
+                              onChange={(e) => {
+                                 setNewProduct({ ...newProduct, price: e.target.value }),
+                                    setIsError(false),
+                                    setErrorMessage('')
+                              }}
+                              required
+                           />
+                           <Input
+                              type="number"
+                              placeholder="Quantidade"
+                              value={newProduct.quantity}
+                              onChange={(e) => {
+                                 setNewProduct({ ...newProduct, quantity: e.target.value }),
+                                    setIsError(false),
+                                    setErrorMessage('')
+                              }}
+                              required
+                           />
+                           <Input
+                              type="text"
+                              placeholder="Criar Categoria ( roupa, tecnologia... )"
+                              value={categoryName}
+                              onChange={(e) => setCategoryName(e.target.value)}
+                           />
+                           <Select onValueChange={(value) => {
+                              setSelectedCategory(value),
+                                 setIsError(false)
+                           }}>
+                              <SelectTrigger className="w-full">
+                                 <SelectValue placeholder="Selecione uma categoria" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                 <SelectGroup>
+                                    <SelectLabel>Categorias</SelectLabel>
+                                    <SelectItem value="none">Nenhum</SelectItem>
+                                    {categories && categories.map((c) => c.name ? (
+                                       <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                                    ) : null)}
+                                 </SelectGroup>
+                              </SelectContent>
+                           </Select>
+                           <Button type="submit" className="w-full">
+                              Adicionar Produto
+                           </Button>
+                           {isError &&
+                              <p className="text-red-600 text-center text-sm">{errorMessage}</p>
+                           }
+                        </form>
+                     </CardContent>
+                  </Card>
+                  <Card className="w-80">
+                     <CardHeader>
+                        <CardTitle>Todas as categorias</CardTitle>
+                     </CardHeader>
+                     <CardContent className="overflow-y-scroll mr-3">
+                        <ul>
+                           {categories.map((c) => (
+                              <li key={c.id} className="flex justify-between mb-2">
+                                 {c.name} - {categoryCounts[c.id] || 0} produtos
+                                 <Trash2 fill="transparent" stroke="#fff" size={28}
+                                    className="mr-2 stroke-red-600 bg-transparent p-1 cursor-pointer rounded-md"
+                                    onClick={() => handleModalCategory(c)} />
+                              </li>
+                           ))}
+                        </ul>
+                     </CardContent>
+                  </Card>
+               </div>
+               <Table className="bg-white dark:bg-zinc-900 rounded-lg">
+                  <TableHeader>
+                     <TableRow>
+                        <TableHead className="p-3 cursor-pointer" onClick={() => handleSort("name")}>
+                           <p className="flex gap-1">Nome {sortColumn === "name" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
+                        </TableHead>
+                        <TableHead className="cursor-pointer" onClick={() => handleSort("category_id")}>
+                           <p className="flex gap-1">Categoria  {sortColumn === "category_id" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
+                        </TableHead>
+                        <TableHead className="cursor-pointer" onClick={() => handleSort("price")}>
+                           <p className="flex gap-1">Preço  {sortColumn === "price" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
+                        </TableHead>
+                        <TableHead className="cursor-pointer" onClick={() => handleSort("quantity")}>
+                           <p className="flex gap-1">Quantidade  {sortColumn === "quantity" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
+                        </TableHead>
+                        <TableHead className="cursor-pointer" onClick={() => (handleSort("sold"), handleUpdateProduct)}>
+                           <p className="flex gap-1">Vendidos  {sortColumn === "sold" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
+                        </TableHead>
+                        <TableHead>Ações</TableHead>
+                     </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                     {isLoading ? (
+                        <TableRow>
+                           <TableCell colSpan={4}>Carregando...</TableCell>
+                        </TableRow>
+                     ) : (
+                        sortedProducts.map((product) => (
+                           <TableRow key={product.id}>
+                              <TableCell className="p-3">{product.name}</TableCell>
+                              <TableCell>
+                                 {categories.find((c) => c.id === product.category_id)?.name || "Sem categoria"}
+                              </TableCell>
+                              <TableCell>R$ {product.price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
+                              <TableCell>{product.quantity.toLocaleString("pt-BR")}</TableCell>
+                              <TableCell>{product.sold}</TableCell>
+                              <TableCell className="flex">
+                                 <Trash2 fill="transparent" stroke="#fff" size={28}
+                                    className="mr-2 bg-red-600 p-1 cursor-pointer rounded-md"
+                                    onClick={() => handleModalDeleteProduct(product)}
+                                 />
+                                 <Pen fill="transparent" stroke="#fff" size={28}
+                                    className="bg-emerald-600 p-1 cursor-pointer rounded-md"
+                                    onClick={() => handleEditProduct(product)}
+                                 />
+                              </TableCell>
+                           </TableRow>
+                        ))
+                     )}
+                  </TableBody>
+               </Table>
+            </div>
+            <Dialog open={isOpen} onOpenChange={setIsOpen}>
+               <DialogContent>
+                  <DialogHeader>
+                     <DialogTitle className="text-center">Edite o produto</DialogTitle>
+                  </DialogHeader>
+                  <form className="flex flex-col gap-3">
+                     <div>
+                        <Label htmlFor="modalName" className="mb-1 text-base">Nome</Label>
+                        <Input id="modalName"
                            type="text"
-                           placeholder="Criar Categoria ( roupa, tecnologia... )"
-                           value={categoryName}
-                           onChange={(e) => setCategoryName(e.target.value)}
+                           placeholder="Nome do produto"
+                           value={modalProduct?.name}
+                           onChange={(e) => setModalProduct({ ...modalProduct!, name: e.target.value })}
+                           required
                         />
-                        <Select onValueChange={(value) => {
+                     </div>
+                     <div>
+                        <Label htmlFor="modalPrice" className="mb-1 text-base">Preço</Label>
+                        <Input id="modalPrice"
+                           type="number"
+                           placeholder="Preço do produto"
+                           value={modalProduct?.price}
+                           onChange={(e) => setModalProduct({ ...modalProduct!, price: Number(e.target.value) })}
+                           required
+                        />
+                     </div>
+                     <div>
+                        <Label htmlFor="modalQuantity" className="mb-1 text-base">Quantidade</Label>
+                        <Input id="modalQuantity"
+                           type="number"
+                           placeholder="Nome do produto"
+                           value={modalProduct?.quantity}
+                           onChange={(e) => setModalProduct({ ...modalProduct!, quantity: Number(e.target.value) })}
+                           required
+                        />
+                     </div>
+                     <div>
+                        <Label htmlFor="modalSold" className="mb-1 text-base">Vendidos</Label>
+                        <Input id="modalSold"
+                           type="number"
+                           placeholder="Quantidade vendida"
+                           value={modalProduct?.sold}
+                           onChange={(e) => setModalProduct({ ...modalProduct!, sold: Number(e.target.value) })}
+                           required
+                        />
+                     </div>
+                     <div>
+                        <Select defaultValue={modalProduct?.category_id} onValueChange={(value) => {
                            setSelectedCategory(value),
                               setIsError(false)
                         }}>
@@ -432,183 +577,42 @@ export default function Products() {
                            <SelectContent>
                               <SelectGroup>
                                  <SelectLabel>Categorias</SelectLabel>
-                                 <SelectItem value="none">Nenhum</SelectItem>
                                  {categories && categories.map((c) => c.name ? (
-                                    <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                                  ) : null)}
                               </SelectGroup>
                            </SelectContent>
                         </Select>
-                        <Button type="submit" className="w-full">
-                           Adicionar Produto
-                        </Button>
-                        {isError &&
-                           <p className="text-red-600 text-center text-sm">{errorMessage}</p>
-                        }
-                     </form>
-                  </CardContent>
-               </Card>
-               <Card className="w-80">
-                  <CardHeader>
-                     <CardTitle>Todas as categorias</CardTitle>
-                  </CardHeader>
-                  <CardContent className="overflow-y-scroll mr-3">
-                     <ul>
-                        {categories.map((c) => (
-                           <li key={c.id} className="flex justify-between mb-2">
-                              {c.name} - {categoryCounts[c.id] || 0} produtos
-                              <Trash2 fill="transparent" stroke="#fff" size={28}
-                                 className="mr-2 stroke-red-600 bg-transparent p-1 cursor-pointer rounded-md"
-                                 onClick={() => handleModalCategory(c)} />
-                           </li>
-                        ))}
-                     </ul>
-                  </CardContent>
-               </Card>
-            </div>
-            <Table className="bg-white dark:bg-zinc-900 rounded-lg">
-               <TableHeader>
-                  <TableRow>
-                     <TableHead className="p-3 cursor-pointer" onClick={() => handleSort("name")}>
-                        <p className="flex gap-1">Nome {sortColumn === "name" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
-                     </TableHead>
-                     <TableHead className="cursor-pointer" onClick={() => handleSort("category_id")}>
-                        <p className="flex gap-1">Categoria  {sortColumn === "category_id" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
-                     </TableHead>
-                     <TableHead className="cursor-pointer" onClick={() => handleSort("price")}>
-                        <p className="flex gap-1">Preço  {sortColumn === "price" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
-                     </TableHead>
-                     <TableHead className="cursor-pointer" onClick={() => handleSort("quantity")}>
-                        <p className="flex gap-1">Quantidade  {sortColumn === "quantity" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
-                     </TableHead>
-                     <TableHead className="cursor-pointer" onClick={() => (handleSort("sold"), handleUpdateProduct)}>
-                        <p className="flex gap-1">Vendidos  {sortColumn === "sold" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
-                     </TableHead>
-                     <TableHead>Ações</TableHead>
-                  </TableRow>
-               </TableHeader>
-               <TableBody>
-                  {isLoading ? (
-                     <TableRow>
-                        <TableCell colSpan={4}>Carregando...</TableCell>
-                     </TableRow>
-                  ) : (
-                     sortedProducts.map((product) => (
-                        <TableRow key={product.id}>
-                           <TableCell className="p-3">{product.name}</TableCell>
-                           <TableCell>
-                              {categories.find((c) => c.id === product.category_id)?.name || "Sem categoria"}
-                           </TableCell>
-                           <TableCell>R$ {product.price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
-                           <TableCell>{product.quantity.toLocaleString("pt-BR")}</TableCell>
-                           <TableCell>{product.sold}</TableCell>
-                           <TableCell className="flex">
-                              <Trash2 fill="transparent" stroke="#fff" size={28}
-                                 className="mr-2 bg-red-600 p-1 cursor-pointer rounded-md"
-                                 onClick={() => handleModalDeleteProduct(product)}
-                              />
-                              <Pen fill="transparent" stroke="#fff" size={28}
-                                 className="bg-emerald-600 p-1 cursor-pointer rounded-md"
-                                 onClick={() => handleEditProduct(product)}
-                              />
-                           </TableCell>
-                        </TableRow>
-                     ))
-                  )}
-               </TableBody>
-            </Table>
-         </div>
-         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogContent>
-               <DialogHeader>
-                  <DialogTitle className="text-center">Edite o produto</DialogTitle>
-               </DialogHeader>
-               <form className="flex flex-col gap-3">
-                  <div>
-                     <Label htmlFor="modalName" className="mb-1 text-base">Nome</Label>
-                     <Input id="modalName"
-                        type="text"
-                        placeholder="Nome do produto"
-                        value={modalProduct?.name}
-                        onChange={(e) => setModalProduct({ ...modalProduct!, name: e.target.value })}
-                        required
-                     />
+                     </div>
+                     {isError &&
+                        <p className="text-red-600 text-center text-sm">{errorMessage}</p>
+                     }
+                  </form>
+                  <div className="flex justify-center gap-3">
+                     <Button onClick={handleUpdateProduct}>Confirmar</Button>
+                     <DialogClose className="bg-red-600 px-3 py-1 rounded-md text-white cursor-pointer"
+                        onClick={() => setIsError(false)}>
+                        Cancelar
+                     </DialogClose>
                   </div>
-                  <div>
-                     <Label htmlFor="modalPrice" className="mb-1 text-base">Preço</Label>
-                     <Input id="modalPrice"
-                        type="number"
-                        placeholder="Preço do produto"
-                        value={modalProduct?.price}
-                        onChange={(e) => setModalProduct({ ...modalProduct!, price: Number(e.target.value) })}
-                        required
-                     />
+               </DialogContent>
+            </Dialog>
+            <Dialog open={alertOpen} onOpenChange={setAlertOpen}>
+               <DialogContent>
+                  <DialogHeader>
+                     <DialogTitle className="text-center">{modalTitle}</DialogTitle>
+                     <DialogDescription className="text-center text-zinc-700 dark:text-zinc-300 my-1">{modalDescription}</DialogDescription>
+                  </DialogHeader>
+                  <div className="flex justify-center items-center gap-5 mx-auto">
+                     <Button onClick={modalAction}>Confirmar</Button>
+                     <DialogClose className="bg-red-600 px-3 py-[6px] rounded-md text-white cursor-pointer w-fit">
+                        Cancelar
+                     </DialogClose>
                   </div>
-                  <div>
-                     <Label htmlFor="modalQuantity" className="mb-1 text-base">Quantidade</Label>
-                     <Input id="modalQuantity"
-                        type="number"
-                        placeholder="Nome do produto"
-                        value={modalProduct?.quantity}
-                        onChange={(e) => setModalProduct({ ...modalProduct!, quantity: Number(e.target.value) })}
-                        required
-                     />
-                  </div>
-                  <div>
-                     <Label htmlFor="modalSold" className="mb-1 text-base">Vendidos</Label>
-                     <Input id="modalSold"
-                        type="number"
-                        placeholder="Quantidade vendida"
-                        value={modalProduct?.sold}
-                        onChange={(e) => setModalProduct({ ...modalProduct!, sold: Number(e.target.value) })}
-                        required
-                     />
-                  </div>
-                  <div>
-                     <Select defaultValue={modalProduct?.category_id} onValueChange={(value) => {
-                        setSelectedCategory(value),
-                           setIsError(false)
-                     }}>
-                        <SelectTrigger className="w-full">
-                           <SelectValue placeholder="Selecione uma categoria" />
-                        </SelectTrigger>
-                        <SelectContent>
-                           <SelectGroup>
-                              <SelectLabel>Categorias</SelectLabel>
-                              {categories && categories.map((c) => c.name ? (
-                                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                              ) : null)}
-                           </SelectGroup>
-                        </SelectContent>
-                     </Select>
-                  </div>
-                  {isError &&
-                     <p className="text-red-600 text-center text-sm">{errorMessage}</p>
-                  }
-               </form>
-               <div className="flex justify-center gap-3">
-                  <Button onClick={handleUpdateProduct}>Confirmar</Button>
-                  <DialogClose className="bg-red-600 px-3 py-1 rounded-md text-white cursor-pointer"
-                     onClick={() => setIsError(false)}>
-                     Cancelar
-                  </DialogClose>
-               </div>
-            </DialogContent>
-         </Dialog>
-         <Dialog open={alertOpen} onOpenChange={setAlertOpen}>
-            <DialogContent>
-               <DialogHeader>
-                  <DialogTitle className="text-center">{modalTitle}</DialogTitle>
-                  <DialogDescription className="text-center text-zinc-700 dark:text-zinc-300 my-1">{modalDescription}</DialogDescription>
-               </DialogHeader>
-               <div className="flex justify-center items-center gap-5 mx-auto">
-                  <Button onClick={modalAction}>Confirmar</Button>
-                  <DialogClose className="bg-red-600 px-3 py-[6px] rounded-md text-white cursor-pointer w-fit">
-                     Cancelar
-                  </DialogClose>
-               </div>
-            </DialogContent>
-         </Dialog>
-      </div >
+               </DialogContent>
+            </Dialog>
+         </div >
+         <Footer />
+      </div>
    )
 }
