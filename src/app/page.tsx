@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AreaChartComponent } from "@/components/charts/areaChart";
-import { BarChartComponent } from "@/components/charts/barChart";
-import { PieChartComponent } from "@/components/charts/pieChart";
-import { Loading } from "@/components/loading";
+import { SoldMonthChart } from "@/components/charts/soldMonthChart";
+import { TotalSoldChart } from "@/components/charts/totalSoldChart";
 import { Skeleton } from "@/components/skeleton";
 import { supabase } from "@/lib/supabase";
 import { Product } from "@/types/product";
 import { Footer } from "@/components/footer";
-import { BarChartVComponent } from "@/components/charts/barChartV";
-import { BarChartVLess } from "@/components/charts/barChartVLess";
+import { BestSellersChart } from "@/components/charts/bestSellersChart";
+import { WorstSellersChart } from "@/components/charts/worstSellers";
+import { DollarSign } from "lucide-react";
+import Products from "./(private)/products/page";
 
 export default function Home() {
    const [formattedData, setFormattedData] = useState<Product[]>([]);
@@ -45,6 +45,7 @@ export default function Home() {
          }));
 
          setFormattedData(formatted);
+         console.log("formatted: ", formatted)
       } catch (error: any) {
          console.error("Erro ao buscar produtos:", error);
       }
@@ -65,6 +66,10 @@ export default function Home() {
    }));
 
    // Dados de totais
+   const totalProfit = formattedData.reduce((acc, product) => acc + (product.sold * (product.price - product.cost)), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+   const totalInvoicing = formattedData.reduce((acc, product) => acc + (product.sold * product.price), 0);
+   const totalCost = formattedData.reduce((acc, product) => acc + product.cost, 0);
+   const totalPrice = formattedData.reduce((acc, product) => acc + product.price, 0);
    const totalQuantity = formattedData.reduce((acc, product) => acc + product.quantity, 0);
    const totalSold = formattedData.reduce((acc, product) => acc + product.sold, 0);
    const monthsCount = Object.keys(productsByMonth).length;
@@ -77,21 +82,49 @@ export default function Home() {
             <h1 className="mb-5">Dashboard</h1>
             <div className="grid grid-cols-1 min-h-[80vh] gap-10">
                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 items-start">
+                  <div className="flex justify-center items-center flex-col flex-1 text-center h-44 rounded-xl p-2 bg-emerald-100 dark:bg-emerald-950 border border-emerald-600">
+                     <p className="flex gap-1 text-lg"><DollarSign /> Faturamento total</p>
+                     <p className="text-2xl font-semibold my-3">
+                        {totalInvoicing.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                     </p>
+                     <p className="text-sm text-zinc-700 dark:text-zinc-400">Soma do valor de todas as vendas realizadas, sem considerar os custos.</p>
+                  </div>
+                  <div className="flex justify-center items-center flex-col flex-1 text-center h-44 rounded-xl p-2 bg-emerald-50 dark:bg-emerald-950 border border-emerald-600">
+                     <p className="flex gap-1 text-lg"><DollarSign /> Lucro total</p>
+                     <p className="text-2xl font-semibold my-3">{totalProfit}</p>
+                     <p className="text-sm text-zinc-700 dark:text-zinc-400">Valor restante após descontar os custos do faturamento total.</p>
+                  </div>
+                  <div className="flex justify-center items-center flex-col flex-1 text-center h-44 rounded-xl p-2 bg-emerald-50 dark:bg-emerald-950 border border-emerald-600">
+                     <p className="flex gap-1 text-lg"><DollarSign /> Custo total</p>
+                     <p className="text-2xl font-semibold my-3">
+                        {totalCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                     </p>
+                     <p className="text-sm text-zinc-700 dark:text-zinc-400">Soma dos custos de todos os produtos vendidos.</p>
+                  </div>
+                  <div className="flex justify-center items-center flex-col flex-1 text-center h-44 rounded-xl p-2 bg-emerald-50 dark:bg-emerald-950 border border-emerald-600">
+                     <p className="flex gap-1 text-lg"><DollarSign /> Preço total</p>
+                     <p className="text-center text-2xl font-semibold my-3">
+                        {totalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                     </p>
+                     <p className="text-sm text-zinc-700 dark:text-zinc-400">Soma do preço de venda de todos os produtos comercializados.</p>
+                  </div>
+               </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 items-start">
                   {isLoading ? <Skeleton />
-                     : <PieChartComponent totalQuantity={totalQuantity} totalSold={totalSold} />
+                     : <TotalSoldChart totalQuantity={totalQuantity} totalSold={totalSold} />
                   }
                   {isLoading ? <Skeleton h="300px" />
-                     : <BarChartComponent products={formattedChartData}
+                     : <SoldMonthChart products={formattedChartData}
                         avgProductsPerMonth={avgProductsPerMonth}
                         avgSoldPerMonth={avgSoldPerMonth} />
                   }
                </div>
                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
                   {isLoading ? <Skeleton />
-                     : <BarChartVComponent bestSellers={formattedData.sort((a, b) => b.sold - a.sold).slice(0, 5)} />
+                     : <BestSellersChart bestSellers={formattedData.sort((a, b) => b.sold - a.sold).slice(0, 5)} />
                   }
                   {isLoading ? <Skeleton />
-                     : <BarChartVLess bestSellers={formattedData.sort((a, b) => b.sold + a.sold).slice(0, 5)} />
+                     : <WorstSellersChart bestSellers={formattedData.sort((a, b) => b.sold + a.sold).slice(0, 5)} />
                   }
 
                </div>

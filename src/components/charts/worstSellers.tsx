@@ -37,8 +37,8 @@ const chartConfig = {
 type props = {
    bestSellers: any;
 }
-export function BarChartVLess({bestSellers}: props) {
-   console.log("bestSellers:",bestSellers)
+export function WorstSellersChart({bestSellers}: props) {
+
    return (
       <Card className="col-span-1 md:col-span-2 flex flex-col shadow-lg hover:border-emerald-300 dark:hover:border-emerald-900 transition">
          <CardHeader>

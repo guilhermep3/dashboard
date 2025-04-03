@@ -23,7 +23,7 @@ type props = {
    totalQuantity: number;
    totalSold: number;
 }
-export function PieChartComponent({ totalQuantity, totalSold }: props) {
+export function TotalSoldChart({ totalQuantity, totalSold }: props) {
 
    const chartData = [
       { name: "Quantidade Total", total: totalQuantity, fill: "var(--secondary-color)" },

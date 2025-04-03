@@ -23,8 +23,7 @@ type props = {
   avgProductsPerMonth: any;
   avgSoldPerMonth: any;
 }
-export function BarChartComponent({ products, avgProductsPerMonth, avgSoldPerMonth }: props) {
-
+export function SoldMonthChart({ products, avgProductsPerMonth, avgSoldPerMonth }: props) {
 
   const chartConfig = {
     quantity: {
