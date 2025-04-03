@@ -21,6 +21,10 @@ const productSchema = z.object({
       .trim()
       .min(1, "O preço é obrigatório.")
       .refine(value => !isNaN(parseFloat(value)) && parseFloat(value) > 0, "O preço deve ser um número válido."),
+   cost: z.string()
+      .trim()
+      .min(1, "O custo é obrigatório")
+      .refine(value => !isNaN(parseFloat(value)) && parseFloat(value) > 0, "O preço deve ser um número válido."),
    quantity: z.string()
       .trim()
       .min(1, "A quantidade é obrigatória.")
@@ -47,6 +51,7 @@ export default function Products() {
    const [newProduct, setNewProduct] = useState({
       name: '',
       price: '',
+      cost: '',
       quantity: '',
       category_id: '',
       sold: 0
@@ -119,6 +124,7 @@ export default function Products() {
             const validatedData = productSchema.parse({
                name: newProduct.name,
                price: newProduct.price,
+               cost: newProduct.cost,
                quantity: newProduct.quantity,
                categoryName: categoryName,
                sold: newProduct.sold.toString()
@@ -148,6 +154,7 @@ export default function Products() {
             const { error } = await supabase.from("products").insert({
                name: validatedData.name,
                price: parseFloat(validatedData.price),
+               cost: parseFloat(validatedData.cost),
                quantity: parseInt(validatedData.quantity),
                category_id: categoryId,
                user_id: userData.user.id,
@@ -164,6 +171,7 @@ export default function Products() {
             const validatedData = productSchema.parse({
                name: newProduct.name,
                price: newProduct.price,
+               cost: newProduct.cost,
                quantity: newProduct.quantity,
                selectedCategory: selectedCategory,
                sold: newProduct.sold.toString()
@@ -186,6 +194,7 @@ export default function Products() {
             const { error } = await supabase.from("products").insert({
                name: validatedData.name,
                price: parseFloat(validatedData.price),
+               cost: parseFloat(validatedData.cost),
                quantity: parseInt(validatedData.quantity),
                category_id: categoryId,
                user_id: userData.user.id,
@@ -194,7 +203,7 @@ export default function Products() {
                return console.error("Erro ao adicionar produto:", error);
             }
          }
-         setNewProduct({ name: "", price: "", quantity: "", category_id: "", sold: 0 });
+         setNewProduct({ name: "", price: "", cost: "", quantity: "", category_id: "", sold: 0 });
          setCategoryName("");
          fetchProducts();
          setIsError(false);
@@ -259,14 +268,12 @@ export default function Products() {
       }
 
       try {
-         console.log("selectedCategory: ", selectedCategory)
-         console.log("productToChange.category_id: ", productToChange.category_id)
-         console.log("categoryChanged: ", categoryChanged)
          const { error } = await supabase
             .from("products")
             .update({
                name: modalProduct?.name,
                price: modalProduct?.price,
+               cost: modalProduct?.cost,
                quantity: newQuantity,
                sold: modalProduct!.sold,
                ...categoryChanged && { category_id: selectedCategory }
@@ -409,6 +416,18 @@ export default function Products() {
                            />
                            <Input
                               type="number"
+                              step="0.01"
+                              placeholder="Custo"
+                              value={newProduct.cost}
+                              onChange={(e) => {
+                                 setNewProduct({ ...newProduct, cost: e.target.value }),
+                                    setIsError(false),
+                                    setErrorMessage('')
+                              }}
+                              required
+                           />
+                           <Input
+                              type="number"
                               placeholder="Quantidade"
                               value={newProduct.quantity}
                               onChange={(e) => {
@@ -480,6 +499,9 @@ export default function Products() {
                         <TableHead className="cursor-pointer" onClick={() => handleSort("price")}>
                            <p className="flex gap-1">Preço  {sortColumn === "price" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
                         </TableHead>
+                        <TableHead className="cursor-pointer" onClick={() => handleSort("cost")}>
+                           <p className="flex gap-1">Custo  {sortColumn === "cost" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
+                        </TableHead>
                         <TableHead className="cursor-pointer" onClick={() => handleSort("quantity")}>
                            <p className="flex gap-1">Quantidade  {sortColumn === "quantity" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
                         </TableHead>
@@ -502,6 +524,7 @@ export default function Products() {
                                  {categories.find((c) => c.id === product.category_id)?.name || "Sem categoria"}
                               </TableCell>
                               <TableCell>R$ {product.price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
+                              <TableCell>R$ {product?.cost?.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) || '0'}</TableCell>
                               <TableCell>{product.quantity.toLocaleString("pt-BR")}</TableCell>
                               <TableCell>{product.sold}</TableCell>
                               <TableCell className="flex">
@@ -543,6 +566,16 @@ export default function Products() {
                            placeholder="Preço do produto"
                            value={modalProduct?.price}
                            onChange={(e) => setModalProduct({ ...modalProduct!, price: Number(e.target.value) })}
+                           required
+                        />
+                     </div>
+                     <div>
+                        <Label htmlFor="modalCost" className="mb-1 text-base">Custo</Label>
+                        <Input id="modalCost"
+                           type="number"
+                           placeholder="Custo do produto"
+                           value={modalProduct?.cost}
+                           onChange={(e) => setModalProduct({ ...modalProduct!, cost: Number(e.target.value) })}
                            required
                         />
                      </div>

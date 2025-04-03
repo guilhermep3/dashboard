@@ -35,6 +35,7 @@ export default function Home() {
          const formatted = data.map((p) => ({
             name: p.name,
             price: p.price,
+            cost: p.cost,
             quantity: p.quantity,
             sold: p.sold,
             created_at: new Date(p.created_at).toLocaleString("pt-BR", {
