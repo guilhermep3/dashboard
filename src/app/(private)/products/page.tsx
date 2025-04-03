@@ -315,6 +315,7 @@ export default function Products() {
       setModalDescription(description);
       setModalAction(() => action);
       setModalData(data);
+      setAlertOpen(true)
    }
 
    function handleEditProduct(product: Product) {

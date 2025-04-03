@@ -19,10 +19,13 @@ import {
 } from "@/components/ui/chart"
 
 type props = {
-  products: any
+  products: any;
+  avgProductsPerMonth: any;
+  avgSoldPerMonth: any;
 }
-export function BarChartComponent({ products }: props) {
-  
+export function BarChartComponent({ products, avgProductsPerMonth, avgSoldPerMonth }: props) {
+
+
   const chartConfig = {
     quantity: {
       label: "Quantidade",
@@ -39,7 +42,7 @@ export function BarChartComponent({ products }: props) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base sm:text-lg">Vendas por mês</CardTitle>
-        <CardDescription>January - June 2024</CardDescription>
+        <CardDescription>Total de quantidade e vendas por mês</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
@@ -63,10 +66,10 @@ export function BarChartComponent({ products }: props) {
       </CardContent>
       <CardFooter className="flex-col items-start gap-2 text-sm">
         <div className="flex gap-2 font-medium leading-none">
-          Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
+          Média de vendas por mês {avgSoldPerMonth}
         </div>
         <div className="leading-none text-muted-foreground">
-          Showing total visitors for the last 6 months
+          Média de quantidade por mês {avgProductsPerMonth}
         </div>
       </CardFooter>
     </Card>

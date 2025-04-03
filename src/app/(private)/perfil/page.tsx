@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase";
 import { useProfileStore } from "@/store/zustand";
+import { Product } from "@/types/product";
 import { deleteCookie } from "cookies-next";
 import { LogOut } from "lucide-react";
 import Link from "next/link";
@@ -21,10 +22,12 @@ export default function Perfil() {
    const router = useRouter();
    const profileImage = useProfileStore((state) => state.profileImage);
    const fetchImage = useProfileStore((state) => state.fetchImage);
+   const [products, setProducts] = useState<Partial<Product[]>>([]);
 
    useEffect(() => {
       getUsername();
       fetchImage();
+      fetchProducts();
    }, []);
 
    useEffect(() => {
@@ -110,6 +113,20 @@ export default function Perfil() {
       await deleteCookie('token')
    };
 
+   async function fetchProducts() {
+      try {
+         const { data, error } = await supabase
+            .from("products")
+            .select("*")
+            .order("created_at", { ascending: false });
+
+         if (error) throw error;
+         console.log("dados: ", data.sort((a, b) => b.sold - a.sold));
+         setProducts(data.sort((a, b) => b.sold - a.sold));
+      } catch (error: any) {
+         console.error("Erro ao buscar produtos:", error);
+      }
+   }
 
    return (
       <div className="p-5 w-full max-w-[1200px] mx-auto">
@@ -166,18 +183,16 @@ export default function Perfil() {
                   </div>
                </CardContent>
             </Card>
-            <Card className="w-full min-w-56">
+            <Card className="w-full min-w-56 max-w-96">
                <CardHeader>
                   <CardTitle>Produtos</CardTitle>
                   <CardDescription>Os cinco mais vendidos</CardDescription>
                </CardHeader>
                <CardContent className="flex flex-col h-full">
                   <ul className="mb-5">
-                     <li className="mb-2"><p>Celular</p></li>
-                     <li className="mb-2"><p>Monitor</p></li>
-                     <li className="mb-2"><p>Celular</p></li>
-                     <li className="mb-2"><p>Monitor</p></li>
-                     <li className="mb-2"><p>Celular</p></li>
+                     {products.slice(0, 5).map((p) => (
+                        <li className="mb-2 flex justify-between gap-3"><p>{p?.name}</p> <span>{p?.sold} vendas</span></li>
+                     ))}
                   </ul>
                   <Button className=" w-full mt-auto">
                      <Link href={'/products'}>Ver todos</Link>
