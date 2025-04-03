@@ -34,8 +34,6 @@ export const Header = ({ showAside, setShowAside }: props) => {
             return 'Produtos';
          case '/perfil':
             return 'Perfil';
-         case '/employees':
-            return 'Empregados'
          default:
             return 'Vistats';
       }
@@ -70,7 +68,7 @@ export const Header = ({ showAside, setShowAside }: props) => {
    return (
       <header className="bg-white dark:bg-black flex justify-between items-center px-5 sm:px-6 py-3 min-h-24 w-full transition">
          <Menu onClick={() => setShowAside()} className="block sm:hidden" />
-         <h1 className="text-2xl sm:text-3xl font-semibold text-emerald-600">{headerTitle}</h1>
+         <h1 className="text-2xl sm:text-3xl font-bold text-emerald-600">Vistats</h1>
          <div className="flex items-center gap-3">
             <ThemeToggle />
             <div className="flex items-center gap-2 p-2 max-w-40 rounded-xl cursor-pointer dark:bg-zinc-900 border border-zinc-400 dark:border-zinc-800 shadow-lg shadow-zinc-200 dark:shadow-black"
@@ -79,11 +77,11 @@ export const Header = ({ showAside, setShowAside }: props) => {
                   <img
                      src={profileImage ?? 'avatar.jpg'}
                      alt="Foto de perfil"
-                     className="w-9 h-9 rounded-full object-cover border "
+                     className="w-10 h-10 rounded-full object-cover border"
                   />
                ) : (
                   <>
-                     <img className="size-9 rounded-full " src="avatar.jpg" alt="Adicionar Foto" />
+                     <img className="size-10 rounded-full " src="avatar.jpg" alt="Adicionar Foto" />
                      <span className="text-center text-sm">Adicionar foto</span>
                   </>
                )}

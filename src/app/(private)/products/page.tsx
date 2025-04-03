@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/lib/supabase";
+import { Product } from "@/types/product";
 import { ChevronDown, ChevronUp, Pen, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -23,10 +24,6 @@ const productSchema = z.object({
       .trim()
       .min(1, "A quantidade é obrigatória.")
       .refine(value => !isNaN(parseInt(value)) && parseInt(value) > 0, "A quantidade deve ser um número válido."),
-   sold: z.string()
-      .trim()
-      .min(0, "A quantidade é obrigatória.")
-      .refine(value => !isNaN(parseInt(value)) && parseInt(value) > 0, "A quantidade deve ser um número válido."),
    categoryName: z.string().optional(),
    selectedCategory: z.string().optional(),
 }).refine((data) => {
@@ -39,14 +36,6 @@ const productSchema = z.object({
 });
 
 
-interface Product {
-   id: string;
-   name: string;
-   price: number;
-   quantity: number;
-   category_id?: any;
-   sold: number;
-}
 export default function Products() {
    const router = useRouter();
    const [isLoading, setIsLoading] = useState(true);
@@ -64,7 +53,7 @@ export default function Products() {
    const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
    const [selectedCategory, setSelectedCategory] = useState('');
    const [categoryName, setCategoryName] = useState('');
-   const [isError, setIsError] = useState(true);
+   const [isError, setIsError] = useState(false);
    const [errorMessage, setErrorMessage] = useState('');
    const [modalTitle, setModalTitle] = useState('');
    const [modalDescription, setModalDescription] = useState('');
@@ -77,7 +66,7 @@ export default function Products() {
       checkUser();
       fetchProducts();
       fetchCategories();
-   }, [])
+   }, []);
 
    async function checkUser() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -246,7 +235,10 @@ export default function Products() {
       // boolean
       const soldChanged = modalProduct!.sold !== productToChange.sold;
       const quantityChanged = modalProduct!.quantity !== productToChange.quantity;
-      const categoryChanged = selectedCategory !== productToChange.category_id;
+      let categoryChanged = selectedCategory !== productToChange.category_id;
+      if(!selectedCategory){
+         categoryChanged = false
+      }
       let newQuantity = productToChange.quantity;
 
       // se sold foi mudado, tira da quantidade o valor atualizado
@@ -266,6 +258,9 @@ export default function Products() {
       }
 
       try {
+         console.log("selectedCategory: ",selectedCategory)
+         console.log("productToChange.category_id: ",productToChange.category_id)
+         console.log("categoryChanged: ",categoryChanged)
          const { error } = await supabase
             .from("products")
             .update({
@@ -289,8 +284,7 @@ export default function Products() {
 
 
    async function fetchCategories() {
-      const { data, error } = await supabase
-         .from('categories')
+      const { data, error } = await supabase.from('categories')
          .select('id, name')
          .eq('user_id', (await supabase.auth.getUser())?.data.user?.id);
 
@@ -321,7 +315,6 @@ export default function Products() {
       setModalDescription(description);
       setModalAction(() => action);
       setModalData(data);
-      setAlertOpen(true);
    }
 
    function handleEditProduct(product: Product) {
@@ -332,7 +325,7 @@ export default function Products() {
       openModal(
          `Deletar ${product.name}?`,
          "Tem certeza que deseja excluir este produto? Essa ação não pode ser desfeita.",
-         () => handleDeleteProduct(product.id),
+         () => handleDeleteProduct(product.id!),
          product
       );
    }
@@ -594,7 +587,8 @@ export default function Products() {
                </form>
                <div className="flex justify-center gap-3">
                   <Button onClick={handleUpdateProduct}>Confirmar</Button>
-                  <DialogClose className="bg-red-600 px-3 py-1 rounded-md text-white cursor-pointer">
+                  <DialogClose className="bg-red-600 px-3 py-1 rounded-md text-white cursor-pointer"
+                     onClick={() => setIsError(false)}>
                      Cancelar
                   </DialogClose>
                </div>

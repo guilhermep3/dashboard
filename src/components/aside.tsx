@@ -17,8 +17,7 @@ export const Aside = ({ showAside, setShowAside }: props) => {
    const routeToIdMap: Record<string, number> = {
       '/': 0,
       '/products': 1,
-      '/employees': 2,
-      '/perfil': 3,
+      '/perfil': 2,
    };
 
    useEffect(() => {
@@ -29,8 +28,7 @@ export const Aside = ({ showAside, setShowAside }: props) => {
    const asideItems = [
       { id: 0, icon: <House size={20} />, title: 'Dashboard' },
       { id: 1, icon: <Box size={20} />, title: 'Produtos' },
-      { id: 2, icon: <SquareUserRound size={20} />, title: 'Empregados' },
-      { id: 3, icon: <CircleUserRound size={20} />, title: 'Perfil' },
+      { id: 2, icon: <CircleUserRound size={20} />, title: 'Perfil' },
    ]
    function checkPathName(itemId: number) {
       switch (itemId) {
@@ -39,8 +37,6 @@ export const Aside = ({ showAside, setShowAside }: props) => {
          case 1:
             return '/products'
          case 2:
-            return '/employees'
-         case 3:
             return '/perfil'
          default:
             return '/'

@@ -140,11 +140,11 @@ export default function Perfil() {
                         <img
                            src={profileImage ?? 'avatar.jpg'}
                            alt="Foto de perfil"
-                           className="w-28 h-28 rounded-full object-cover border p-1"
+                           className="w-44 h-44 rounded-full object-cover border"
                         />
                      ) : (
                         <>
-                           <img className="size-28 rounded-full " src="avatar.jpg" alt="Adicionar Foto" />
+                           <img className="size-44 rounded-full " src="avatar.jpg" alt="Adicionar Foto" />
                            <span className="text-center text-sm">Adicionar foto</span>
                         </>
                      )}
