@@ -98,9 +98,11 @@ export function WorstSellersChart({bestSellers}: props) {
             <div className="flex gap-2 font-medium leading-none">
                {bestSellers[0].name ?? 'sem nome'} vendeu {(bestSellers[0].sold / bestSellers[0].quantity * 100).toFixed(2)}% da quantia em estoque <TrendingUp className="h-4 w-4" />
             </div>
-            <div className="leading-none text-muted-foreground">
-               {bestSellers[1].name} vendeu {(bestSellers[1].sold / bestSellers[1].quantity * 100).toFixed(2)}% da quantia em estoque
-            </div>
+            {bestSellers.length > 1 &&
+               <div className="leading-none text-muted-foreground">
+                  {bestSellers[1].name} vendeu {(bestSellers[1].sold / bestSellers[1].quantity * 100).toFixed(2)}% da quantia em estoque
+               </div>
+            }
          </CardFooter>
       </Card>
    )

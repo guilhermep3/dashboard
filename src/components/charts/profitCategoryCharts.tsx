@@ -31,6 +31,9 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export function ProfitCategoryChart({ formattedSortByCategory }: any) {
+   if (!formattedSortByCategory || formattedSortByCategory.length < 2) {
+      return;
+   }
 
    return (
       <Card className="flex flex-col shadow-lg hover:border-emerald-300 dark:hover:border-emerald-900 transition">

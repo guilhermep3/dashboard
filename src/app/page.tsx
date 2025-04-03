@@ -112,6 +112,19 @@ export default function Home() {
 
    console.log("Categorias mais vendidas:", formattedSortByCategory);
 
+   if (!formattedData || formattedData.length === 0) {
+      return (
+         <div>
+            <div className="w-full max-w-[1200px] mx-auto p-5">
+               <h1 className="mb-5">Dashboard</h1>
+               <div className="grid grid-cols-1 min-h-[80vh] gap-10">
+                  Adicione produtos para analisar os gráficos.
+               </div>
+            </div>
+            <Footer />
+         </div>
+      )
+   }
 
    return (
       <div>
