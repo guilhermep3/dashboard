@@ -9,7 +9,7 @@ export function Skeleton({w, h}: props){
 
    return (
       <Card className={` max-w-96`}
-         style={{ width: w ?? '100%', height: h ?? '380px' }}>
+         style={{ width: w ?? '100%', height: h ?? '320px' }}>
          <Loading/>
       </Card>
    )

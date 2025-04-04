@@ -9,11 +9,9 @@ import { Product } from "@/types/product";
 import { Footer } from "@/components/footer";
 import { BestSellersChart } from "@/components/charts/bestSellersChart";
 import { WorstSellersChart } from "@/components/charts/worstSellers";
-import { DollarSign } from "lucide-react";
-import Products from "./(private)/products/page";
-import { Card } from "@/components/ui/card";
 import { DashboardCard } from "@/components/charts/dashboardCard";
 import { ProfitCategoryChart } from "@/components/charts/profitCategoryCharts";
+import { BestSellerProductsT1Category } from "@/components/charts/bestSellerProductsT1Category";
 
 export default function Home() {
    const [formattedData, setFormattedData] = useState<Product[]>([]);
@@ -41,7 +39,7 @@ export default function Home() {
             return data;
          }
          const categories = await fetchCategories()
-         console.log("categories: ", categories)
+         // console.log("categories: ", categories)
 
          const formatted = data.map((p) => ({
             name: p.name,
@@ -96,7 +94,8 @@ export default function Home() {
          acc[product.category_id] = {
             category: product.category,
             totalSold: 0,
-            totalQuantity: 0
+            totalQuantity: 0,
+            category_id: product.category_id
          };
       }
       // Adiciona a quantidade vendida do produto ao total da categoria correspondente
@@ -105,14 +104,28 @@ export default function Home() {
 
       // Retorna o acumulador atualizado para a próxima iteração
       return acc;
-   }, {} as Record<string, { category: string; totalSold: number, totalQuantity: number }>);
-
+   }, {} as Record<string, { category: string; totalSold: number, totalQuantity: number, category_id: any }>);
    // Convertendo o objeto para um array para facilitar a exibição
    const formattedSortByCategory = Object.values(soldByCategory).sort((a, b) => b.totalSold - a.totalSold);
-
    console.log("Categorias mais vendidas:", formattedSortByCategory);
 
-   if (!formattedData || formattedData.length === 0) {
+   let mostProfitable: { name: string; profit: number; }[] = [];
+   if (formattedSortByCategory.length > 0){
+
+      const mostSoldCategoryId = formattedSortByCategory[0].category_id;
+      const productsFromMostSoldCategory = formattedData.filter(
+         product => product.category_id === mostSoldCategoryId
+      );
+
+      mostProfitable = productsFromMostSoldCategory.map(product => ({
+         name: product.name,
+         profit: (product.price - product.cost),
+         fill: "var(--primary-color)"
+      })).sort((a, b) => b.profit - a.profit)
+   };
+   console.log("mostProfitable: ",mostProfitable)
+
+   if (!isLoading && formattedData.length === 0) {
       return (
          <div>
             <div className="w-full max-w-[1200px] mx-auto p-5">
@@ -156,6 +169,9 @@ export default function Home() {
                   }
                   {isLoading ? <Skeleton h="300px" />
                      : <ProfitCategoryChart formattedSortByCategory={formattedSortByCategory} />
+                  }
+                  {isLoading ? <Skeleton h="300px" />
+                     : <BestSellerProductsT1Category mostProfitable={mostProfitable} categoryName={formattedSortByCategory[0].category} />
                   }
                </div>
                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">

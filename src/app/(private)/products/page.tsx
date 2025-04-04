@@ -385,7 +385,8 @@ export default function Products() {
          <div className="p-5 pb-10 w-full max-w-[1300px] mx-auto">
             <h1 className="mb-5">Seus Produtos</h1>
             <div className="grid gap-8 grid-cols-1">
-               <div className="grid items-start grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* grid items-start grid-cols-1 sm:grid-cols-2 */}
+               <div className="flex items-start justify-center flex-wrap gap-3">
                   <Card className="w-full max-w-96">
                      <CardHeader>
                         <CardTitle className="text-lg">Adicionar Produto</CardTitle>

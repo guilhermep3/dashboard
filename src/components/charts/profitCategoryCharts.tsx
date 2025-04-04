@@ -32,7 +32,7 @@ const chartConfig = {
 
 export function ProfitCategoryChart({ formattedSortByCategory }: any) {
    if (!formattedSortByCategory || formattedSortByCategory.length < 2) {
-      return;
+
    }
 
    return (
@@ -65,10 +65,12 @@ export function ProfitCategoryChart({ formattedSortByCategory }: any) {
                {(formattedSortByCategory[0].totalSold / formattedSortByCategory[0].totalQuantity * 100).toFixed(2)}%
                do estoque de {formattedSortByCategory[0].category} vendido <TrendingUp className="h-4 w-4" />
             </div>
-            <div className="leading-none text-muted-foreground">
-               {(formattedSortByCategory[1].totalSold / formattedSortByCategory[1].totalQuantity * 100).toFixed(2)}%
-               do estoque de {formattedSortByCategory[1].category} vendido
-            </div>
+            {formattedSortByCategory.length > 1 &&
+               <div className="leading-none text-muted-foreground">
+                  {(formattedSortByCategory[1].totalSold / formattedSortByCategory[1].totalQuantity * 100).toFixed(2)}%
+                  do estoque de {formattedSortByCategory[1].category} vendido
+               </div>
+            }
          </CardFooter>
       </Card>
    )
