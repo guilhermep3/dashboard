@@ -76,8 +76,8 @@ export const Header = ({ showAside, setShowAside }: props) => {
                {profileImage ? (
                   <img
                      src={profileImage ?? 'avatar.jpg'}
-                     alt="Foto de perfil"
-                     className="w-10 h-10 rounded-full object-cover border"
+                     alt="Foto"
+                     className="flex justify-center items-center size-10 rounded-full object-cover border bg-zinc-300 dark:bg-zinc-800 text-xs"
                   />
                ) : (
                   <>

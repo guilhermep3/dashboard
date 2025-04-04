@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { useEffect, useState } from "react"
+import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog"
+import { useRouter } from "next/navigation"
 
 export default function Register() {
    const [name, setName] = useState('');
@@ -15,6 +17,8 @@ export default function Register() {
    const [password, setPassword] = useState('');
    const [isError, setIsError] = useState(false);
    const [errorMessage, setErrorMessage] = useState('');
+   const [isOpen, setIsOpen] = useState(false);
+   const router = useRouter();
 
    useEffect(() => {
       if (isError === true) {
@@ -58,15 +62,22 @@ export default function Register() {
                name: name,
                company_name: company
             });
-            // console.log("insertError: ", insertError);
+
             if (insertError) {
                setErrorMessage(getTranslatedError(insertError.code));
                throw insertError;
+            } else {
+               setIsOpen(true);
             };
          };
       } catch (error) {
 
       }
+   }
+
+   function handleGoSignIn(){
+      setIsOpen(false);
+      router.push("/signin");
    }
 
    return (
@@ -123,6 +134,15 @@ export default function Register() {
                </form>
             </div>
          </div>
+         <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogContent className="text-center">
+               <DialogHeader>
+                  <h1 className="text-center text-lg font-semibold">Parabéns</h1>
+               </DialogHeader>
+               Conta criada com sucesso, agora entre na sua conta com o mesmo email e senha
+               <Button onClick={handleGoSignIn}>Entrar</Button>
+            </DialogContent>
+         </Dialog>
       </div>
    )
 }

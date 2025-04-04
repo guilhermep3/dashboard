@@ -1,38 +1,48 @@
-## projeto em desenvolvimento
+# Vistats - Dashboard
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Projeto full-stack desenvolvido em React com Next.js, o projeto tem o objetivo de fornecer gráficos para empresas conseguirem visualizar os desempenhos de seus produtos, como quais mais vendem e dão lucro ou faturamento total.
 
-## Getting Started
+<img src="https://github.com/user-attachments/assets/94a42fcb-c4a1-495d-9cb6-b6228d778d57">
 
-First, run the development server:
+## Tecnologias utilizadas.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **NextJS**: Framework react para desenvolvimento web.
+- **Typescript**: Superset do javascript que adiciona tipagem estática ao código.
+- **Css**: Para estilizar os componentes e páginas.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Páginas do projeto
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Login e registro**: Páginas publicas para fazer login e cadastro no site.
+- **Dashboard**: Página principal onde mostra os gráficos dos produtos e categorias.
+- **Produtos**: Página para adicionar e ver todos os produtos da empresa.
+- **Perfil**: Página para ver dados pessoais, fazer logout e mudar a foto de perfil.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Bibliotecas utilizadas
 
-## Learn More
+- **ShadcnUI**: Componentes pré estilizados e gráficos.
+- **Zod**: Facilita na criação e validação de formulários.
+- **Zustand**: Gerenciamento de estado para armazenar a foto de perfil do usuário. 
 
-To learn more about Next.js, take a look at the following resources:
+## Como Executar o Projeto
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Para executar o projeto localmente, siga os passos abaixo:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Clone o repositório:**
 
-## Deploy on Vercel
+   ```bash
+   git clone https://github.com/guilhermep3/dentista-website.git
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. **Instale as dependências**
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   ```bash
+   npm install ou yarn install
+   ```
+
+3. **Execute o projeto**
+
+   ```bash
+   npm run dev ou yarn dev
+   ```
+
+<p>Projeto desenvolvido por <a href="https://github.com/guilhermep3" target="_blank">Guilherme Pereira</a></p>

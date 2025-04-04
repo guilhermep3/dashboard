@@ -12,13 +12,16 @@ import { WorstSellersChart } from "@/components/charts/worstSellers";
 import { DashboardCard } from "@/components/charts/dashboardCard";
 import { ProfitCategoryChart } from "@/components/charts/profitCategoryCharts";
 import { BestSellerProductsT1Category } from "@/components/charts/bestSellerProductsT1Category";
+import { useProfileStore } from "@/store/zustand";
 
 export default function Home() {
    const [formattedData, setFormattedData] = useState<Product[]>([]);
    const [isLoading, setIsLoading] = useState(true);
+   const fetchImage = useProfileStore((state) => state.fetchImage);
 
    useEffect(() => {
       fetchProducts();
+      fetchImage();
       setTimeout(() => setIsLoading(false), 500);
    }, []);
 
