@@ -53,9 +53,6 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export function BestSellerProductsT1Category({mostProfitable, categoryName}: any) {
-  const totalVisitors = React.useMemo(() => {
-    return chartData.reduce((acc, curr) => acc + curr.visitors, 0)
-  }, [])
 
   const dataprofit = mostProfitable.map((i: any, index: number) => ({
     name: i.name,
@@ -102,7 +99,7 @@ export function BestSellerProductsT1Category({mostProfitable, categoryName}: any
                           y={viewBox.cy}
                           className="fill-foreground text-3xl font-bold"
                         >
-                          {totalVisitors.toLocaleString()}
+                          {dataprofit[0].profit.toLocaleString()}
                         </tspan>
                         <tspan
                           x={viewBox.cx}
@@ -120,12 +117,12 @@ export function BestSellerProductsT1Category({mostProfitable, categoryName}: any
           </PieChart>
         </ChartContainer>
       </CardContent>
-      <CardFooter className="flex-col gap-2 text-sm">
+      <CardFooter className="flex-col gap-2 text-sm text-center">
         <div className="flex items-center gap-2 font-medium leading-none">
           {mostProfitable[0].name} é o produto que mais lucra a cada venda
         </div>
         <div className="leading-none text-muted-foreground">
-          Showing total visitors for the last 6 months
+          todos os produtos da categoria mais vendida
         </div>
       </CardFooter>
     </Card>
