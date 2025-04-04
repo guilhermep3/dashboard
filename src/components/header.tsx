@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
 import { useProfileStore } from "@/store/zustand";
+import { getCookie } from "cookies-next";
 
 type props = {
    showAside: boolean;
@@ -18,6 +19,9 @@ export const Header = ({ showAside, setShowAside }: props) => {
    const profileImage = useProfileStore((state) => state.profileImage);
    const fetchImage = useProfileStore((state) => state.fetchImage);
 
+   const authToken = getCookie('token');
+   console.log("authToken: ",authToken)
+
    useEffect(() => {
       getUsername();
       setIsSigninRegister(checkPathname());
@@ -25,11 +29,12 @@ export const Header = ({ showAside, setShowAside }: props) => {
    }, []);
 
    useEffect(() => {
+      setIsSigninRegister(checkPathname());
+   }, [router])
+
+   useEffect(() => {
       fetchImage();
    }, [profileImage])
-   useEffect(() => {
-      console.log("isSigninRegister: ",isSigninRegister)
-   },[isSigninRegister])
 
    function checkPathname() {
       switch (pathname) {
@@ -58,7 +63,7 @@ export const Header = ({ showAside, setShowAside }: props) => {
             return;
          }
 
-         setUsername(data?.name || "Usuário");
+         setUsername(authToken ? data?.name : 'Faça login');
       } catch (error) {
          console.error("Erro ao buscar nome do usuário:", error);
       }
