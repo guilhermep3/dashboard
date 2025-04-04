@@ -3,7 +3,7 @@ import Image from "next/image";
 import Logo from "/public/logo-vistats.png"
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Box, CircleUserRound, House, SquareUserRound } from "lucide-react";
+import { Box, CircleUserRound, House } from "lucide-react";
 
 type props = {
    showAside: boolean;

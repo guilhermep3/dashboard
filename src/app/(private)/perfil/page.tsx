@@ -110,8 +110,8 @@ export default function Perfil() {
 
    async function handleLogOut() {
       const { error } = await supabase.auth.signOut();
-      router.push('/signin')
       await deleteCookie('token')
+      router.push('/signin')
    };
 
    async function fetchProducts() {

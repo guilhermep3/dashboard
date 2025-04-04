@@ -14,28 +14,31 @@ export const Header = ({ showAside, setShowAside }: props) => {
    const router = useRouter();
    const pathname = usePathname();
    const [username, setUsername] = useState<string | null>(null);
-   const [headerTitle, setHeaderTitle] = useState('');
+   const [isSigninRegister, setIsSigninRegister] = useState<boolean | null>(null);
    const profileImage = useProfileStore((state) => state.profileImage);
    const fetchImage = useProfileStore((state) => state.fetchImage);
 
    useEffect(() => {
       getUsername();
-      setHeaderTitle(checkPathname());
+      setIsSigninRegister(checkPathname());
       fetchImage();
    }, []);
 
    useEffect(() => {
       fetchImage();
    }, [profileImage])
+   useEffect(() => {
+      console.log("isSigninRegister: ",isSigninRegister)
+   },[isSigninRegister])
 
    function checkPathname() {
       switch (pathname) {
-         case '/products':
-            return 'Produtos';
-         case '/perfil':
-            return 'Perfil';
+         case '/signin':
+            return true;
+         case '/register':
+            return true;
          default:
-            return 'Vistats';
+            return false;
       }
    }
 
@@ -67,7 +70,7 @@ export const Header = ({ showAside, setShowAside }: props) => {
 
    return (
       <header className="bg-white dark:bg-black flex justify-between items-center px-5 sm:px-6 py-3 min-h-24 w-full transition">
-         <Menu onClick={() => setShowAside()} className="block sm:hidden" />
+         {!isSigninRegister && <Menu onClick={() => setShowAside()} className="block sm:hidden" />}
          <h1 className="text-2xl sm:text-3xl font-bold text-emerald-600">Vistats</h1>
          <div className="flex items-center gap-3">
             <ThemeToggle />
