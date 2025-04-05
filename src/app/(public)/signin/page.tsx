@@ -25,19 +25,34 @@ type LoginSchema = z.infer<typeof loginSchema>;
 
 export default function SignIn() {
    const router = useRouter();
+   const [signinError, setSigninError] = useState<string | null>(null);
    const { handleSubmit, register, formState: { errors } } = useForm<LoginSchema>({
       resolver: zodResolver(loginSchema)
    })
 
+   function checkError(error: string) {
+      switch (error) {
+         case "Invalid login credentials":
+            return "Credenciais inválidas. Verifique seu e-mail e senha.";
+         case "Email not confirmed":
+            return "E-mail ainda não confirmado. Verifique sua caixa de entrada.";
+         case "User not found":
+            return "Usuário não encontrado.";
+         default:
+            return "Ocorreu um erro ao fazer login. Tente novamente.";
+      }
+   }
 
    async function handleSignIn(data: LoginSchema) {
       const { email, password } = data;
+      setSigninError(null);
 
       try {
          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
          console.log("Dados do login:", data);
          console.log('Access token: ', data.session?.access_token)
          if (error) {
+            setSigninError(checkError(error.message));
             throw error;
          };
 
@@ -52,7 +67,7 @@ export default function SignIn() {
 
          router.push('/');
       } catch (error) {
-         console.log(error)
+         console.log("error: ", error)
       }
    }
 
@@ -81,6 +96,7 @@ export default function SignIn() {
                   <Button type="submit" className="text-lg my-1">
                      Enviar
                   </Button>
+                  {signinError && <p className="text-red-500 text-sm mt-1">{signinError}</p>}
                   <div className="text-center mt-2">
                      <p>Não tem uma conta? <Link href={'/register'} className="text-emerald-600 font-semibold">Criar conta</Link></p>
                   </div>

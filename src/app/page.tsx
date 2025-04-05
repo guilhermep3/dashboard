@@ -42,7 +42,6 @@ export default function Home() {
             return data;
          }
          const categories = await fetchCategories()
-         // console.log("categories: ", categories)
 
          const formatted = data.map((p) => ({
             name: p.name,
@@ -110,7 +109,6 @@ export default function Home() {
    }, {} as Record<string, { category: string; totalSold: number, totalQuantity: number, category_id: any }>);
    // Convertendo o objeto para um array para facilitar a exibição
    const formattedSortByCategory = Object.values(soldByCategory).sort((a, b) => b.totalSold - a.totalSold);
-   console.log("Categorias mais vendidas:", formattedSortByCategory);
 
    let mostProfitable: { name: string; profit: number; }[] = [];
    if (formattedSortByCategory.length > 0){
@@ -126,9 +124,8 @@ export default function Home() {
          fill: "var(--primary-color)"
       })).sort((a, b) => b.profit - a.profit)
    };
-   console.log("mostProfitable: ",mostProfitable)
 
-   if (!isLoading && formattedData.length === 0) {
+   if (formattedData.length === 0) {
       return (
          <div>
             <div className="w-full max-w-[1200px] mx-auto p-5">

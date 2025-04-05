@@ -31,27 +31,35 @@ const registerSchema = z.object({
 type RegisterSchema = z.infer<typeof registerSchema>;
 
 export default function Register() {
-   const [formData, setFormData] = useState({
-      name: '',
-      company: '',
-      email: '',
-      password: ''
-   })
+   const [registerError, setRegisterError] = useState<string | null>(null);
    const [isOpen, setIsOpen] = useState(false);
    const router = useRouter();
    const { register, handleSubmit, formState: { errors } } = useForm<RegisterSchema>({
       resolver: zodResolver(registerSchema)
    })
 
+   function checkError(error: string) {
+      switch (error) {
+         case "User already registered":
+            return "Usuário já existe, faça login.";
+         case "Email not confirmed":
+            return "E-mail ainda não confirmado. Verifique sua caixa de entrada.";
+         case "User not found":
+            return "Usuário não encontrado.";
+         default:
+            return "Ocorreu um erro ao fazer login. Tente novamente.";
+      }
+   }
 
    async function handleRegister(data: RegisterSchema) {
-
+      setRegisterError(null);
       const { name, company, email, password } = data;
       try {
          const { data: signUpData, error } = await supabase.auth.signUp({ email, password })
 
          if (error) {
-            throw error
+            setRegisterError(checkError(error.message))
+            throw error;
          };
 
          if (signUpData.user) {
@@ -116,6 +124,7 @@ export default function Register() {
                   <Button type="submit" className="text-lg my-1">
                      Enviar
                   </Button>
+                  {registerError && <p className="text-red-500 text-sm mt-1 text-center">{registerError}</p>}
                   <div className="text-center mt-2">
                      <p>Já possui uma conta? <Link href={'/signin'} className="text-emerald-600 font-semibold">Entrar</Link></p>
                   </div>

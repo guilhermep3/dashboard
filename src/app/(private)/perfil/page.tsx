@@ -31,10 +31,6 @@ export default function Perfil() {
       fetchProducts();
    }, []);
 
-   useEffect(() => {
-      console.log("Imagem de perfil atualizada:", profileImage);
-   }, [profileImage]);
-
    async function getUsername() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -122,7 +118,6 @@ export default function Perfil() {
             .order("created_at", { ascending: false });
 
          if (error) throw error;
-         console.log("dados: ", data.sort((a, b) => b.sold - a.sold));
          setProducts(data.sort((a, b) => b.sold - a.sold));
       } catch (error: any) {
          console.error("Erro ao buscar produtos:", error);
@@ -192,12 +187,14 @@ export default function Perfil() {
                   </CardHeader>
                   <CardContent className="flex flex-col h-full">
                      <ul className="mb-5">
-                        {products.slice(0, 5).map((p) => (
+                        {products.length > 0
+                        ? products.slice(0, 5).map((p) => (
                            <li className="mb-2 flex justify-between gap-3"><p>{p?.name}</p> <span>{p?.sold} vendas</span></li>
-                        ))}
+                        ))
+                        : <p>Adicione produtos</p>}
                      </ul>
                      <Button className=" w-full mt-auto">
-                        <Link href={'/products'}>Ver todos</Link>
+                        <Link href={'/products'}>{products.length > 0 ? 'Ver todos' : 'Criar produto'}</Link>
                      </Button>
                   </CardContent>
                </Card>
