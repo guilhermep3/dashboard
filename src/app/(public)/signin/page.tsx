@@ -5,50 +5,43 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import React, { useEffect, useState } from "react"
+import React, { useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
-import { getCookie, setCookie } from 'cookies-next'; // Instale com: npm install cookies-next
+import { getCookie, setCookie } from 'cookies-next';
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
 
+const loginSchema = z.object({
+   email: z.string()
+      .email("Por favor, insira um e-mail válido")
+      .max(100, "E-mail muito longo"),
+   password: z.string()
+      .min(6, "Senha deve ter pelo menos 6 caracteres")
+})
+
+type LoginSchema = z.infer<typeof loginSchema>;
 
 export default function SignIn() {
-   const [email, setEmail] = useState('');
-   const [password, setPassword] = useState('');
-   const [isError, setIsError] = useState(false);
-   const [errorMessage, setErrorMessage] = useState('');
    const router = useRouter();
+   const { handleSubmit, register, formState: { errors } } = useForm<LoginSchema>({
+      resolver: zodResolver(loginSchema)
+   })
 
-   useEffect(() => {
-      if (isError === true) {
-         setIsError(false);
-      };
-   }, [email, password]);
 
-   function getTranslatedError(error: any) {
-      setIsError(true);
-      switch (error) {
-         case "invalid_credentials":
-            return "Dados inválidos, tente novamente";
-         case "validation_failed":
-            return "Preencha todos os campos corretamente.";
-         default:
-            return "Ocorreu um erro. Tente novamente.";
-      }
-   }
+   async function handleSignIn(data: LoginSchema) {
+      const { email, password } = data;
 
-   async function handleSignIn(e: React.FormEvent) {
-      e.preventDefault();
       try {
          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-         console.log("Dados do login:", data); // Verifique o que está vindo aqui
+         console.log("Dados do login:", data);
          console.log('Access token: ', data.session?.access_token)
          if (error) {
-            setIsError(true);
-            setErrorMessage(getTranslatedError(error.code));
             throw error;
          };
-         
-         if(data.session){
+
+         if (data.session) {
             await setCookie('token', data.session.access_token, {
                path: '/',
                secure: true, // Garante que o cookie só seja transmitido por HTTPS
@@ -56,7 +49,7 @@ export default function SignIn() {
             })
          }
          console.log(getCookie('token'))
-         
+
          router.push('/');
       } catch (error) {
          console.log(error)
@@ -72,29 +65,22 @@ export default function SignIn() {
                <h2 className="text-center">Analise os dados dos produtos da sua empresa!</h2>
             </div>
             <div>
-               <form className="flex flex-col gap-2" onSubmit={handleSignIn}>
+               <form className="flex flex-col gap-2" onSubmit={handleSubmit(handleSignIn)}>
                   <div>
                      <Label htmlFor="email" className="mb-1 text-base">Email</Label>
-                     <Input type="email" id="email"
-                        placeholder="Digite seu email"
-                        className="border-zinc-400"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)} />
+                     <Input type="email" id="email" className="border-zinc-400"
+                        placeholder="Digite seu email" {...register("email")} />
+                     {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
                   </div>
                   <div>
                      <Label htmlFor="password" className="mb-1 text-base">Senha</Label>
-                     <Input type="password" id="password"
-                        placeholder="Digite sua senha"
-                        className="border-zinc-400"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)} />
+                     <Input type="password" id="password" className="border-zinc-400"
+                        placeholder="Digite sua senha" {...register("password")} />
+                     {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>}
                   </div>
                   <Button type="submit" className="text-lg my-1">
                      Enviar
                   </Button>
-                  {isError &&
-                     <p className="text-red-700 text-center">{errorMessage}</p>
-                  }
                   <div className="text-center mt-2">
                      <p>Não tem uma conta? <Link href={'/register'} className="text-emerald-600 font-semibold">Criar conta</Link></p>
                   </div>

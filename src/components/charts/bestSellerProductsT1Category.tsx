@@ -106,7 +106,7 @@ export function BestSellerProductsT1Category({mostProfitable, categoryName}: any
                           y={(viewBox.cy || 0) + 24}
                           className="fill-muted-foreground"
                         >
-                          Visitors
+                          {mostProfitable[0].name}
                         </tspan>
                       </text>
                     )
