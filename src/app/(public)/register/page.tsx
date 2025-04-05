@@ -52,7 +52,6 @@ export default function Register() {
 
          if (error) {
             setErrorMessage(getTranslatedError(error.code));
-            console.log('errorMessage: ', errorMessage)
             throw error
          };
 
@@ -71,11 +70,11 @@ export default function Register() {
             };
          };
       } catch (error) {
-
+         throw error;
       }
    }
 
-   function handleGoSignIn(){
+   function handleGoSignIn() {
       setIsOpen(false);
       router.push("/signin");
    }
@@ -85,7 +84,7 @@ export default function Register() {
          <div className="flex flex-col gap-4 p-3 sm:p-5 mx-2 rounded-xl sm:min-w-96 border border-zinc-800 bg-white dark:bg-black shadow-2xl shadow-emerald-200 dark:shadow-emerald-950">
             <div className="flex flex-col items-center border-b border-zinc-400 pb-4">
                <Image src={Logo} alt="Logo da Vistats" className="size-16" />
-               <h1 className="text-xl font-semibold my-1">Cadstre-se na <span className="font-bold text-emerald-600">Vistats</span></h1>
+               <h1 className="text-xl font-semibold my-1">Cadastre-se na <span className="font-bold text-emerald-600">Vistats</span></h1>
                <h2 className="text-center">Analise os dados dos produtos da sua empresa!</h2>
             </div>
             <div>

@@ -20,7 +20,7 @@ export const Header = ({ showAside, setShowAside }: props) => {
    const fetchImage = useProfileStore((state) => state.fetchImage);
 
    const authToken = getCookie('token');
-   console.log("authToken: ",authToken)
+   console.log("authToken: ", authToken)
 
    useEffect(() => {
       getUsername();
