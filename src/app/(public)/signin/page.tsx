@@ -57,11 +57,13 @@ export default function SignIn() {
          };
 
          if (data.session) {
-            await setCookie('token', data.session.access_token, {
-               path: '/',
-               secure: true, // Garante que o cookie só seja transmitido por HTTPS
-               maxAge: 60 * 60 * 24 * 7 // Expira em 7 dias
-            })
+            if(!getCookie('token')){
+               await setCookie('token', data.session.access_token, {
+                  path: '/',
+                  secure: true, // Garante que o cookie só seja transmitido por HTTPS
+                  maxAge: 60 * 60 * 24 * 7 // Expira em 7 dias
+               })
+            }
          }
          console.log(getCookie('token'))
 

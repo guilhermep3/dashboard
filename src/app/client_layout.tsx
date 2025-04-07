@@ -2,13 +2,45 @@
 import { Aside } from "@/components/aside";
 import { Header } from "@/components/header";
 import { HeaderSignInRegister } from "@/components/headerSigninRegister";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { getCookie, setCookie } from "cookies-next";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
    const hiddenRoutes = ["/signin", "/register"];
    const pathname = usePathname();
    const [showAside, setShowAside] = useState(false);
+   const router = useRouter();
+
+   useEffect(() => {
+      async function checkAuth() {
+         const { data: { session } } = await supabase.auth.getSession();
+         if (!session) {
+            router.push('/signin');
+         }
+      }
+      checkAuth();
+   }, []);
+
+
+   useEffect(() => {
+      setAuthCookie();
+   }, [])
+
+   async function setAuthCookie() {
+      const cookieToken = getCookie('token');
+      if (!cookieToken) {
+         const { data: { session } } = await supabase.auth.getSession();
+         if (!session?.access_token) {
+            setCookie('token', session?.access_token, {
+               path: '/',
+               secure: true,
+               maxAge: 60 * 60 * 24 * 7 // expira em 7 dias
+            })
+         }
+      }
+   };
 
    return (
       <>
