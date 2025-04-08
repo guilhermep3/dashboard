@@ -8,7 +8,6 @@ import Link from "next/link"
 import React, { useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
-import { getCookie, setCookie } from 'cookies-next';
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -55,17 +54,6 @@ export default function SignIn() {
             setSigninError(checkError(error.message));
             throw error;
          };
-
-         if (data.session) {
-            if(!getCookie('token')){
-               await setCookie('token', data.session.access_token, {
-                  path: '/',
-                  secure: true, // Garante que o cookie só seja transmitido por HTTPS
-                  maxAge: 60 * 60 * 24 * 7 // Expira em 7 dias
-               })
-            }
-         }
-         console.log(getCookie('token'))
 
          router.push('/');
       } catch (error) {

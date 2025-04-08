@@ -3,7 +3,6 @@ import { Aside } from "@/components/aside";
 import { Header } from "@/components/header";
 import { HeaderSignInRegister } from "@/components/headerSigninRegister";
 import { supabase } from "@/lib/supabase";
-import { getCookie, setCookie } from "cookies-next";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -21,31 +20,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
          }
       }
       checkAuth();
-      setAuthCookie();
    }, []);
-
-   async function setAuthCookie() {
-      const { data: { session }, error } = await supabase.auth.getSession();
-
-      if (error || !session?.access_token) {
-         const { data: refreshedSession, error: refreshError } = await supabase.auth.refreshSession();
-         if (refreshError || !refreshedSession.session) {
-            router.push('/signin');
-            return;
-         }
-         setCookie('token', refreshedSession.session.access_token, {
-            path: '/',
-            secure: true,
-            maxAge: 60 * 60 * 24 * 7 // expira em 7 dias
-         });
-      } else {
-         setCookie('token', session.access_token, {
-            path: '/',
-            secure: true,
-            maxAge: 60 * 60 * 24 * 7 // expira em 7 dias
-         })
-      }
-   };
 
    return (
       <>
