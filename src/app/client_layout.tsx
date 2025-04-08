@@ -21,24 +21,29 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
          }
       }
       checkAuth();
+      setAuthCookie();
    }, []);
 
-
-   useEffect(() => {
-      setAuthCookie();
-   }, [])
-
    async function setAuthCookie() {
-      const cookieToken = getCookie('token');
-      if (!cookieToken) {
-         const { data: { session } } = await supabase.auth.getSession();
-         if (!session?.access_token) {
-            setCookie('token', session?.access_token, {
-               path: '/',
-               secure: true,
-               maxAge: 60 * 60 * 24 * 7 // expira em 7 dias
-            })
+      const { data: { session }, error } = await supabase.auth.getSession();
+
+      if (error || !session?.access_token) {
+         const { data: refreshedSession, error: refreshError } = await supabase.auth.refreshSession();
+         if (refreshError || !refreshedSession.session) {
+            router.push('/signin');
+            return;
          }
+         setCookie('token', refreshedSession.session.access_token, {
+            path: '/',
+            secure: true,
+            maxAge: 60 * 60 * 24 * 7 // expira em 7 dias
+         });
+      } else {
+         setCookie('token', session.access_token, {
+            path: '/',
+            secure: true,
+            maxAge: 60 * 60 * 24 * 7 // expira em 7 dias
+         })
       }
    };
 
