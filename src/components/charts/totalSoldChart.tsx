@@ -99,7 +99,7 @@ export function TotalSoldChart({ totalQuantity, totalSold }: props) {
          </CardContent>
          <CardFooter className="flex-col gap-2 text-sm text-center">
             <div className="flex items-center gap-2 font-medium leading-none">
-               {(totalSold / totalQuantity * 100).toFixed(2)}% dos produtos foram vendidos
+               {(totalSold + totalQuantity ).toLocaleString('pt-BR')} produtos foram movimentados.
             </div>
             <div className="leading-none text-muted-foreground">
                Quantidade em Estoque: {totalQuantity.toLocaleString()}

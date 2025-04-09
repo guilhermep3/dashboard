@@ -38,13 +38,12 @@ type props = {
    bestSellers: any;
 }
 export function BestSellersChart({ bestSellers }: props) {
-   console.log("bestSellers: ", bestSellers)
    if (!bestSellers || bestSellers.length === 0) {
       return <p>Carregando dados...</p>;
    }
 
    return (
-      <Card className="col-span-1 md:col-span-2 flex flex-col shadow-lg hover:border-emerald-300 dark:hover:border-emerald-900 transition">
+      <Card className="col-span-1 flex flex-col shadow-lg hover:border-emerald-300 dark:hover:border-emerald-900 transition">
          <CardHeader>
             <CardTitle>5 Produtos mais vendidos</CardTitle>
             <CardDescription>Numeros totais</CardDescription>

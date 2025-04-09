@@ -57,15 +57,14 @@ export function BestSellerProductsT1Category({mostProfitable, categoryName}: any
   const dataprofit = mostProfitable.map((i: any, index: number) => ({
     name: i.name,
     profit: i.profit,
-    fill: index % 2 === 0 ? 'var(--primary-color)' : 'var(--chart-3)'
+    fill: index % 2 === 0 ? 'var(--primary-color)' : 'var(--secondary-color)'
   }))
-  console.log("dataprofit: ",dataprofit)
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col col-span-1 shadow-lg hover:border-emerald-300 dark:hover:border-emerald-900 transition">
       <CardHeader className="items-center pb-0">
-        <CardTitle>{categoryName} mais lucrativas</CardTitle>
-        <CardDescription>Numeros totais</CardDescription>
+        <CardTitle>{mostProfitable.length} Produtos mais lucrativos</CardTitle>
+        <CardDescription>Lucro por venda</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         <ChartContainer

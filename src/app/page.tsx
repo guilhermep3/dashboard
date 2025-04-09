@@ -13,6 +13,7 @@ import { DashboardCard } from "@/components/charts/dashboardCard";
 import { ProfitCategoryChart } from "@/components/charts/profitCategoryCharts";
 import { BestSellerProductsT1Category } from "@/components/charts/bestSellerProductsT1Category";
 import { useProfileStore } from "@/store/zustand";
+import { ProfitableMonthChart } from "@/components/charts/profitableMonthChart";
 
 export default function Home() {
    const [formattedData, setFormattedData] = useState<Product[]>([]);
@@ -72,19 +73,43 @@ export default function Home() {
       return acc;
    }, {} as Record<string, Product[]>);
 
-   const formattedChartData = Object.entries(productsByMonth).map(([month, products]) => ({
+   const productsSoldPerMonth = Object.entries(productsByMonth).map(([month, products]) => ({
       month,
       quantity: products.reduce((acc, p) => acc + p.quantity, 0),
       sold: products.reduce((acc, p) => acc + p.sold, 0),
    }));
 
+   const profitByCategory = formattedData.reduce((acc, product) => {
+      const lucroTotal = (product.price - product.cost) * product.sold;
+      const catId = product.category_id;
+
+      if (!acc[catId]) {
+         acc[catId] = {
+            category: product.category,
+            profit: 0,
+            category_id: catId
+         };
+      }
+
+      acc[catId].profit += lucroTotal;
+
+      return acc;
+   }, {} as Record<string, { category: string; profit: number; category_id: string }>);
+
+   const sortedProfitByCategory = Object.values(profitByCategory)
+   .sort((a, b) => b.profit - a.profit);
+   console.log("productsSoldPerMonth: ",productsSoldPerMonth)
+   console.log("sortedProfitByCategory: ",sortedProfitByCategory)
+
    // Dados de totais
-   const totalProfit = formattedData.reduce((acc, product) => acc + (product.sold * (product.price - product.cost)), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+   const totalProfit = formattedData.reduce((acc, product) => acc + (product.sold * (product.price - product.cost)), 0)
+      .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
    const totalInvoicing = formattedData.reduce((acc, product) => acc + (product.sold * product.price), 0);
    const totalCost = formattedData.reduce((acc, product) => acc + product.cost, 0);
    const totalPrice = formattedData.reduce((acc, product) => acc + product.price, 0);
    const totalQuantity = formattedData.reduce((acc, product) => acc + product.quantity, 0);
    const totalSold = formattedData.reduce((acc, product) => acc + product.sold, 0);
+   console.log("totalSold: ", totalSold)
    const monthsCount = Object.keys(productsByMonth).length;
    const avgProductsPerMonth = monthsCount > 0 ? totalQuantity / monthsCount : 0;
    const avgSoldPerMonth = monthsCount > 0 ? totalSold / monthsCount : 0;
@@ -110,26 +135,20 @@ export default function Home() {
    // Convertendo o objeto para um array para facilitar a exibição
    const formattedSortByCategory = Object.values(soldByCategory).sort((a, b) => b.totalSold - a.totalSold);
 
-   let mostProfitable: { name: string; profit: number; }[] = [];
-   if (formattedSortByCategory.length > 0){
-
-      const mostSoldCategoryId = formattedSortByCategory[0].category_id;
-      const productsFromMostSoldCategory = formattedData.filter(
-         product => product.category_id === mostSoldCategoryId
-      );
-
-      mostProfitable = productsFromMostSoldCategory.map(product => ({
+   const mostProfitableChartData = formattedData
+      .map(product => ({
          name: product.name,
          profit: (product.price - product.cost),
          fill: "var(--primary-color)"
-      })).sort((a, b) => b.profit - a.profit)
-   };
+      }))
+      .sort((a, b) => b.profit - a.profit)
+      .slice(0, 6);
 
    if (formattedData.length === 0) {
       return (
          <div>
-            <div className="w-full max-w-[1200px] mx-auto p-5">
-               <h1 className="mb-5">Dashboard</h1>
+            <div className="w-full max-w-[1300px] mx-auto p-5">
+               <h1 className="mb-5 text-lg sm:text-xl font-semibold">Dashboard</h1>
                <div className="grid grid-cols-1 min-h-[80vh] gap-10">
                   Adicione produtos para analisar os gráficos.
                </div>
@@ -141,8 +160,8 @@ export default function Home() {
 
    return (
       <div>
-         <div className="w-full max-w-[1200px] mx-auto p-5">
-            <h1 className="mb-5">Dashboard</h1>
+         <div className="w-full max-w-[1300px] mx-auto p-5">
+            <h1 className="mb-5 text-lg sm:text-xl font-semibold">Dashboard</h1>
             <div className="grid grid-cols-1 min-h-[80vh] gap-10">
                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 items-start">
                   <DashboardCard data={totalInvoicing}
@@ -158,30 +177,37 @@ export default function Home() {
                      title="Preço total"
                      description="Soma do preço de venda de todos os produtos comercializados." />
                </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 items-start">
-                  {isLoading ? <Skeleton />
-                     : <TotalSoldChart totalQuantity={totalQuantity} totalSold={totalSold} />
-                  }
-                  {isLoading ? <Skeleton h="300px" />
-                     : <SoldMonthChart products={formattedChartData}
-                        avgProductsPerMonth={avgProductsPerMonth}
-                        avgSoldPerMonth={avgSoldPerMonth} />
-                  }
-                  {isLoading ? <Skeleton h="300px" />
-                     : <ProfitCategoryChart formattedSortByCategory={formattedSortByCategory} />
-                  }
-                  {isLoading ? <Skeleton h="300px" />
-                     : <BestSellerProductsT1Category mostProfitable={mostProfitable} categoryName={formattedSortByCategory[0].category} />
-                  }
+               <div className="flex flex-col border-t-2 border-zinc-300 dark:border-zinc-900">
+                  <h1 className="text-lg my-3">Vendas</h1>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 items-start">
+                     {isLoading ? <Skeleton />
+                        : <TotalSoldChart totalQuantity={totalQuantity} totalSold={totalSold} />
+                     }
+                     {isLoading ? <Skeleton h="300px" />
+                        : <SoldMonthChart products={productsSoldPerMonth}
+                           avgProductsPerMonth={avgProductsPerMonth}
+                           avgSoldPerMonth={avgSoldPerMonth} />
+                     }
+                     {isLoading ? <Skeleton h="300px" />
+                        : <ProfitCategoryChart formattedSortByCategory={formattedSortByCategory} />
+                     }
+                     {isLoading ? <Skeleton />
+                        : <BestSellersChart bestSellers={formattedData.sort((a, b) => b.sold - a.sold).slice(0, 5)} />
+                     }
+                  </div>
                </div>
-               <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                  {isLoading ? <Skeleton />
-                     : <BestSellersChart bestSellers={formattedData.sort((a, b) => b.sold - a.sold).slice(0, 5)} />
-                  }
-                  {isLoading ? <Skeleton />
-                     : <WorstSellersChart bestSellers={formattedData.sort((a, b) => b.sold + a.sold).slice(0, 5)} />
-                  }
-
+               <div className="flex flex-col border-t-2 border-zinc-300 dark:border-zinc-900">
+                  <h1 className="text-lg my-3">Lucros</h1>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 items-start">
+                     {isLoading ? <Skeleton h="300px" />
+                        : <BestSellerProductsT1Category mostProfitable={mostProfitableChartData} categoryName={formattedSortByCategory[0].category} />
+                     }
+                     {isLoading ? <Skeleton h="300px" />
+                        : <ProfitableMonthChart products={sortedProfitByCategory}
+                           avgProductsPerMonth={avgProductsPerMonth}
+                           avgSoldPerMonth={avgSoldPerMonth} />
+                     }
+                  </div>
                </div>
             </div>
          </div>

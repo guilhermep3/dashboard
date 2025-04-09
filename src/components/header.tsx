@@ -19,9 +19,6 @@ export const Header = ({ showAside, setShowAside }: props) => {
    const profileImage = useProfileStore((state) => state.profileImage);
    const fetchImage = useProfileStore((state) => state.fetchImage);
 
-   const authToken = getCookie('token');
-   console.log("authToken: ", authToken)
-
    useEffect(() => {
       getUsername();
       setIsSigninRegister(checkPathname());
@@ -63,7 +60,7 @@ export const Header = ({ showAside, setShowAside }: props) => {
             return;
          }
 
-         setUsername(authToken ? data?.name : 'Faça login');
+         setUsername(data?.name ?? 'Faça login');
       } catch (error) {
          console.error("Erro ao buscar nome do usuário:", error);
       }
