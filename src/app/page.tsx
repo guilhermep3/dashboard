@@ -14,56 +14,17 @@ import { ProfitCategoryChart } from "@/components/charts/profitCategoryCharts";
 import { BestSellerProductsT1Category } from "@/components/charts/bestSellerProductsT1Category";
 import { useProfileStore } from "@/store/zustand";
 import { ProfitableMonthChart } from "@/components/charts/profitableMonthChart";
+import { useDashboardData } from "@/hooks/useDashboarddata";
+import { ProfitMonthChart } from "@/components/charts/profitMonthChart";
+import { MediaProfitByCategory } from "@/components/charts/mediaPorfitByCategory";
 
 export default function Home() {
-   const [formattedData, setFormattedData] = useState<Product[]>([]);
-   const [isLoading, setIsLoading] = useState(true);
+   const { data: formattedData, loading: isLoading } = useDashboardData();
    const fetchImage = useProfileStore((state) => state.fetchImage);
 
    useEffect(() => {
-      fetchProducts();
       fetchImage();
-      setTimeout(() => setIsLoading(false), 500);
    }, []);
-
-   async function fetchProducts() {
-      try {
-         const { data, error } = await supabase
-            .from("products")
-            .select("*")
-            .order("created_at", { ascending: false });
-
-         if (error) throw error;
-
-         console.log("dados puros: ", data);
-
-         async function fetchCategories() {
-            const { data, error } = await supabase.from("categories").select("*");
-            if (error) throw error;
-            return data;
-         }
-         const categories = await fetchCategories()
-
-         const formatted = data.map((p) => ({
-            name: p.name,
-            price: p.price,
-            cost: p.cost,
-            quantity: p.quantity,
-            sold: p.sold,
-            category: categories.find((c) => c.id === p.category_id)?.name,
-            created_at: new Date(p.created_at).toLocaleString("pt-BR", {
-               month: "long",
-               year: "numeric",
-            }),
-            category_id: p.category_id
-         }));
-
-         setFormattedData(formatted);
-         console.log("formatted: ", formatted)
-      } catch (error: any) {
-         console.error("Erro ao buscar produtos:", error);
-      }
-   }
 
    // Agrupamento por mês
    const productsByMonth = formattedData.reduce((acc, product) => {
@@ -72,12 +33,19 @@ export default function Home() {
       acc[month].push(product);
       return acc;
    }, {} as Record<string, Product[]>);
+   console.log("productsByMonth: ",productsByMonth)
 
    const productsSoldPerMonth = Object.entries(productsByMonth).map(([month, products]) => ({
       month,
       quantity: products.reduce((acc, p) => acc + p.quantity, 0),
       sold: products.reduce((acc, p) => acc + p.sold, 0),
    }));
+
+   const productsProfitPerMonth = Object.entries(productsByMonth).map(([month, product]) => ({
+      month,
+      profit: product.reduce((acc, p) => acc + (p.price - p.cost), 0)
+   }))
+   console.log("productsProfitPerMonth: ",productsProfitPerMonth)
 
    const profitByCategory = formattedData.reduce((acc, product) => {
       const lucroTotal = (product.price - product.cost) * product.sold;
@@ -97,9 +65,7 @@ export default function Home() {
    }, {} as Record<string, { category: string; profit: number; category_id: string }>);
 
    const sortedProfitByCategory = Object.values(profitByCategory)
-   .sort((a, b) => b.profit - a.profit);
-   console.log("productsSoldPerMonth: ",productsSoldPerMonth)
-   console.log("sortedProfitByCategory: ",sortedProfitByCategory)
+      .sort((a, b) => b.profit - a.profit);
 
    // Dados de totais
    const totalProfit = formattedData.reduce((acc, product) => acc + (product.sold * (product.price - product.cost)), 0)
@@ -109,7 +75,6 @@ export default function Home() {
    const totalPrice = formattedData.reduce((acc, product) => acc + product.price, 0);
    const totalQuantity = formattedData.reduce((acc, product) => acc + product.quantity, 0);
    const totalSold = formattedData.reduce((acc, product) => acc + product.sold, 0);
-   console.log("totalSold: ", totalSold)
    const monthsCount = Object.keys(productsByMonth).length;
    const avgProductsPerMonth = monthsCount > 0 ? totalQuantity / monthsCount : 0;
    const avgSoldPerMonth = monthsCount > 0 ? totalSold / monthsCount : 0;
@@ -132,8 +97,29 @@ export default function Home() {
       // Retorna o acumulador atualizado para a próxima iteração
       return acc;
    }, {} as Record<string, { category: string; totalSold: number, totalQuantity: number, category_id: any }>);
-   // Convertendo o objeto para um array para facilitar a exibição
+   // Convertendo o objeto para um array
    const formattedSortByCategory = Object.values(soldByCategory).sort((a, b) => b.totalSold - a.totalSold);
+   console.log("formattedSortByCategory: ",formattedSortByCategory)
+   
+   const averageProfitByCategory = formattedData.reduce((acc, product) => {
+      if(!acc[product.category_id]){
+         acc[product.category_id] = {
+            category: product.category,
+            profit: 0,
+            count: 0
+         }
+         acc[product.category_id].profit += (product.price - product.cost);
+         acc[product.category_id].count += 1;
+      }
+      return acc;
+   }, {} as Record<string, { category: string, profit: number, count: number}>);
+
+   const formattedAverageProfitByCategory = Object.values(averageProfitByCategory)
+      .map(({category, count, profit}) => ({
+         category,
+         averageProfit: profit / count
+      })).sort((a, b) => b.averageProfit - a.averageProfit)
+
 
    const mostProfitableChartData = formattedData
       .map(product => ({
@@ -143,6 +129,7 @@ export default function Home() {
       }))
       .sort((a, b) => b.profit - a.profit)
       .slice(0, 6);
+
 
    if (formattedData.length === 0) {
       return (
@@ -203,9 +190,17 @@ export default function Home() {
                         : <BestSellerProductsT1Category mostProfitable={mostProfitableChartData} categoryName={formattedSortByCategory[0].category} />
                      }
                      {isLoading ? <Skeleton h="300px" />
+                        : <ProfitMonthChart products={productsProfitPerMonth}
+                           avgProductsPerMonth={avgProductsPerMonth}
+                           avgSoldPerMonth={avgSoldPerMonth} />
+                     }
+                     {isLoading ? <Skeleton />
                         : <ProfitableMonthChart products={sortedProfitByCategory}
                            avgProductsPerMonth={avgProductsPerMonth}
                            avgSoldPerMonth={avgSoldPerMonth} />
+                     }
+                     {isLoading ? <Skeleton />
+                        : <MediaProfitByCategory products={formattedAverageProfitByCategory} />
                      }
                   </div>
                </div>

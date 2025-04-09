@@ -17,8 +17,6 @@ import {
    ChartTooltip,
    ChartTooltipContent,
 } from "@/components/ui/chart"
-import { Product } from "@/types/product"
-import Products from "@/app/(private)/products/page"
 
 const chartConfig = {
    desktop: {

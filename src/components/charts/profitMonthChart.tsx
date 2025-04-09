@@ -38,13 +38,14 @@ type props = {
   avgProductsPerMonth: any;
   avgSoldPerMonth: any;
 }
-export function ProfitableMonthChart({ products, avgProductsPerMonth, avgSoldPerMonth }: props) {
+export function ProfitMonthChart({ products, avgProductsPerMonth, avgSoldPerMonth }: props) {
   const totalProfit = products.reduce((acc: any, product: { profit: any }) => acc + product.profit, 0)
+  
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Categorias mais lucrativas</CardTitle>
-        <CardDescription>Lucro total</CardDescription>
+        <CardTitle>Lucros por mês</CardTitle>
+        <CardDescription>Total de lucro por mês</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
@@ -57,11 +58,11 @@ export function ProfitableMonthChart({ products, avgProductsPerMonth, avgSoldPer
           >
             <CartesianGrid vertical={false} />
             <XAxis
-              dataKey="category"
+              dataKey="month"
               tickLine={false}
               tickMargin={10}
               axisLine={false}
-              tickFormatter={(value) => value.slice(0, 10)}
+              tickFormatter={(value) => value.slice(0, 3)}
             />
             <ChartTooltip
               cursor={false}
@@ -79,11 +80,11 @@ export function ProfitableMonthChart({ products, avgProductsPerMonth, avgSoldPer
         </ChartContainer>
       </CardContent>
       <CardFooter className="flex-col items-start gap-2 text-sm">
-        <div className="flex gap-2 font-medium leading-none mx-auto">
-          {((products[0].profit / totalProfit) * 100).toFixed(2)}% dos lucros são de {products[0].category}
+        <div className="flex gap-2 font-medium leading-none mx-auto text-center">
+          {((products[0].profit / totalProfit) * 100).toFixed(2)}% dos lucros são de {products[0].month}
         </div>
         <div className="leading-none text-muted-foreground mx-auto">
-          categorias que mais lucram
+          Média de lucro por mês {totalProfit / products.length}
         </div>
       </CardFooter>
     </Card>
