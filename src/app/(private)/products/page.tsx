@@ -1,21 +1,20 @@
 "use client"
 import { Footer } from "@/components/footer";
+import { FormProduct } from "@/components/form-product";
 import { Loading } from "@/components/loading";
+import { ModalEdit } from "@/components/modal-edit";
+import { TableProducts } from "@/components/table-products";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/lib/supabase";
 import { Product } from "@/types/product";
-import { ChevronDown, ChevronUp, Pen, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { z } from "zod";
 
-const productSchema = z.object({
+export const productSchema = z.object({
    name: z.string().trim().min(1, "O nome do produto é obrigatório."),
    price: z.string()
       .trim()
@@ -40,7 +39,6 @@ const productSchema = z.object({
    path: ["categoryName"],
 });
 
-
 export default function Products() {
    const router = useRouter();
    const [isLoading, setIsLoading] = useState(true);
@@ -48,25 +46,14 @@ export default function Products() {
    const [isOpen, setIsOpen] = useState(false);
    const [alertOpen, setAlertOpen] = useState(false);
    const [modalProduct, setModalProduct] = useState<Product | null>(null);
-   const [newProduct, setNewProduct] = useState({
-      name: '',
-      price: '',
-      cost: '',
-      quantity: '',
-      category_id: '',
-      sold: 0
-   });
    const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
    const [selectedCategory, setSelectedCategory] = useState('');
-   const [categoryName, setCategoryName] = useState('');
    const [isError, setIsError] = useState(false);
    const [errorMessage, setErrorMessage] = useState('');
    const [modalTitle, setModalTitle] = useState('');
    const [modalDescription, setModalDescription] = useState('');
    const [modalData, setModalData] = useState<any>(null);
    const [modalAction, setModalAction] = useState<() => void>(() => { });
-   const [sortColumn, setSortColumn] = useState<keyof Product | null>(null);
-   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
    useEffect(() => {
       checkUser();
@@ -94,123 +81,6 @@ export default function Products() {
          console.log(error)
       } finally {
          setIsLoading(false);
-      }
-   };
-
-   async function handleAddProduct(e: React.FormEvent) {
-      e.preventDefault();
-
-      const { data: userData, error: errorGetUser } = await supabase.auth.getUser();
-      if (!userData.user) {
-         return console.error("Usuário não autenticado!", errorGetUser);
-      }
-
-      const isCreatingCategory = categoryName.trim() !== '';
-      const isSelectingCategory = selectedCategory !== '' && selectedCategory !== 'none';
-
-      if (!isCreatingCategory && !isSelectingCategory) {
-         setErrorMessage("Preencha um dos campos de categoria.");
-         setIsError(true);
-         return;
-      } else if (isCreatingCategory && isSelectingCategory) {
-         setErrorMessage("Preencha apenas um campo de categoria.");
-         setIsError(true);
-         return;
-      }
-
-      try {
-         let categoryId: string | null = null;
-         if (isCreatingCategory) {
-            const validatedData = productSchema.parse({
-               name: newProduct.name,
-               price: newProduct.price,
-               cost: newProduct.cost,
-               quantity: newProduct.quantity,
-               categoryName: categoryName,
-               sold: newProduct.sold.toString()
-            })
-
-            const alreadyHaveCategory = categories.some(
-               (c) => c.name.toLowerCase().trim() === categoryName.toLowerCase().trim()
-            );
-            if (alreadyHaveCategory) {
-               setErrorMessage("Essa categoria já existe!");
-               setIsError(true);
-               return;
-            }
-            const { data: categoryData, error: categoryError } = await supabase
-               .from("categories")
-               .insert({ name: categoryName, user_id: userData.user.id })
-               .select("id")
-               .single();
-
-            if (categoryError) {
-               return console.error("Erro ao criar categoria: ", categoryError);
-            }
-
-            categoryId = categoryData.id;
-
-            // Adiciona o produto
-            const { error } = await supabase.from("products").insert({
-               name: validatedData.name,
-               price: parseFloat(validatedData.price),
-               cost: parseFloat(validatedData.cost),
-               quantity: parseInt(validatedData.quantity),
-               category_id: categoryId,
-               user_id: userData.user.id,
-
-            });
-
-            fetchCategories();
-
-            if (error) {
-               return console.error("Erro ao adicionar produto:", error);
-            }
-         }
-         if (isSelectingCategory) {
-            const validatedData = productSchema.parse({
-               name: newProduct.name,
-               price: newProduct.price,
-               cost: newProduct.cost,
-               quantity: newProduct.quantity,
-               selectedCategory: selectedCategory,
-               sold: newProduct.sold.toString()
-            });
-
-            const selectedCat = categories.find((c) => c.name === selectedCategory);
-            if (!selectedCat) {
-               setErrorMessage("Categoria selecionada inválida.");
-               setIsError(true);
-               return;
-            }
-            categoryId = selectedCat.id;
-            if (!categoryId) {
-               setErrorMessage("Erro ao definir categoria.");
-               setIsError(true);
-               return;
-            }
-
-            // Adiciona o produto
-            const { error } = await supabase.from("products").insert({
-               name: validatedData.name,
-               price: parseFloat(validatedData.price),
-               cost: parseFloat(validatedData.cost),
-               quantity: parseInt(validatedData.quantity),
-               category_id: categoryId,
-               user_id: userData.user.id,
-            });
-            if (error) {
-               return console.error("Erro ao adicionar produto:", error);
-            }
-         }
-         setNewProduct({ name: "", price: "", cost: "", quantity: "", category_id: "", sold: 0 });
-         setCategoryName("");
-         fetchProducts();
-         setIsError(false);
-      } catch (error: any) {
-         const firstError = error.errors[0];
-         setErrorMessage(firstError.message);
-         setIsError(true);
       }
    };
 
@@ -242,7 +112,6 @@ export default function Products() {
       }
 
       const productToChange = data;
-      // boolean
       const soldChanged = modalProduct!.sold !== productToChange.sold;
       const quantityChanged = modalProduct!.quantity !== productToChange.quantity;
       let categoryChanged = selectedCategory !== productToChange.category_id;
@@ -353,36 +222,9 @@ export default function Products() {
       return acc;
    }, {} as Record<string, number>);
 
-   const handleSort = (column: keyof Product) => {
-      if (sortColumn === column) {
-         // se a coluna a ser ordenada é a atual, inverta o sentido
-         setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-      } else {
-         setSortColumn(column);
-         setSortDirection("asc");
-      }
-   };
-
-   const sortedProducts = [...products].sort((a, b) => {
-      if (!sortColumn) return 0;
-      const valueA = a[sortColumn];
-      const valueB = b[sortColumn];
-
-      // se for string, ordene alfabéticamente
-      if (typeof valueA === "string" && typeof valueB === "string") {
-         return sortDirection === "asc" ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA);
-      }
-      // se for numero, ordene numericamente
-      if (typeof valueA === "number" && typeof valueB === "number") {
-         return sortDirection === "asc" ? valueA - valueB : valueB - valueA;
-      }
-
-      return 0;
-   });
-
    return (
       <div>
-         {isLoading 
+         {isLoading
             ? <div className="mt-28">
                <Loading />
             </div>
@@ -390,89 +232,21 @@ export default function Products() {
                <div className="p-5 pb-10 w-full max-w-[1300px] mx-auto">
                   <h1 className="mb-5">Seus Produtos</h1>
                   <div className="grid gap-8 grid-cols-1">
-                     {/* grid items-start grid-cols-1 sm:grid-cols-2 */}
                      <div className="flex items-start justify-center flex-wrap gap-3">
                         <Card className="w-full max-w-96">
                            <CardHeader>
                               <CardTitle className="text-lg">Adicionar Produto</CardTitle>
                            </CardHeader>
                            <CardContent>
-                              <form onSubmit={handleAddProduct} className="space-y-4">
-                                 <Input
-                                    placeholder="Nome do produto"
-                                    value={newProduct.name}
-                                    onChange={(e) => {
-                                       setNewProduct({ ...newProduct, name: e.target.value }),
-                                          setIsError(false),
-                                          setErrorMessage('')
-                                    }}
-                                    required
-                                 />
-                                 <Input
-                                    type="number"
-                                    step="0.01"
-                                    placeholder="Preço"
-                                    value={newProduct.price}
-                                    onChange={(e) => {
-                                       setNewProduct({ ...newProduct, price: e.target.value }),
-                                          setIsError(false),
-                                          setErrorMessage('')
-                                    }}
-                                    required
-                                 />
-                                 <Input
-                                    type="number"
-                                    step="0.01"
-                                    placeholder="Custo"
-                                    value={newProduct.cost}
-                                    onChange={(e) => {
-                                       setNewProduct({ ...newProduct, cost: e.target.value }),
-                                          setIsError(false),
-                                          setErrorMessage('')
-                                    }}
-                                    required
-                                 />
-                                 <Input
-                                    type="number"
-                                    placeholder="Quantidade"
-                                    value={newProduct.quantity}
-                                    onChange={(e) => {
-                                       setNewProduct({ ...newProduct, quantity: e.target.value }),
-                                          setIsError(false),
-                                          setErrorMessage('')
-                                    }}
-                                    required
-                                 />
-                                 <Input
-                                    type="text"
-                                    placeholder="Criar Categoria ( roupa, tecnologia... )"
-                                    value={categoryName}
-                                    onChange={(e) => setCategoryName(e.target.value)}
-                                 />
-                                 <Select onValueChange={(value) => {
-                                    setSelectedCategory(value),
-                                       setIsError(false)
-                                 }}>
-                                    <SelectTrigger className="w-full">
-                                       <SelectValue placeholder="Selecione uma categoria" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                       <SelectGroup>
-                                          <SelectLabel>Categorias</SelectLabel>
-                                          <SelectItem value="none">Nenhum</SelectItem>
-                                          {categories && categories.map((c) => c.name ? (
-                                             <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                                          ) : null)}
-                                       </SelectGroup>
-                                    </SelectContent>
-                                 </Select>
-                                 <Button type="submit" className="w-full">
-                                    Adicionar Produto
-                                 </Button>
-                                 {isError &&
-                                    <p className="text-red-600 text-center text-sm">{errorMessage}</p>
-                                 }
-                              </form>
+                              <FormProduct
+                                 errorMessage={errorMessage}
+                                 setErrorMessage={setErrorMessage}
+                                 selectedCategory={selectedCategory}
+                                 categories={categories}
+                                 fetchProducts={fetchProducts}
+                                 fetchCategories={fetchCategories}
+                                 setSelectedCategory={setSelectedCategory}
+                              />
                            </CardContent>
                         </Card>
                         <Card className="w-80">
@@ -493,149 +267,26 @@ export default function Products() {
                            </CardContent>
                         </Card>
                      </div>
-                     <Table className="bg-white dark:bg-zinc-900 rounded-lg">
-                        <TableHeader>
-                           <TableRow>
-                              <TableHead className="p-3 cursor-pointer" onClick={() => handleSort("name")}>
-                                 <p className="flex gap-1">Nome {sortColumn === "name" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
-                              </TableHead>
-                              <TableHead className="cursor-pointer" onClick={() => handleSort("category_id")}>
-                                 <p className="flex gap-1">Categoria  {sortColumn === "category_id" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
-                              </TableHead>
-                              <TableHead className="cursor-pointer" onClick={() => handleSort("price")}>
-                                 <p className="flex gap-1">Preço  {sortColumn === "price" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
-                              </TableHead>
-                              <TableHead className="cursor-pointer" onClick={() => handleSort("cost")}>
-                                 <p className="flex gap-1">Custo  {sortColumn === "cost" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
-                              </TableHead>
-                              <TableHead className="cursor-pointer" onClick={() => handleSort("quantity")}>
-                                 <p className="flex gap-1">Quantidade  {sortColumn === "quantity" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
-                              </TableHead>
-                              <TableHead className="cursor-pointer" onClick={() => (handleSort("sold"), handleUpdateProduct)}>
-                                 <p className="flex gap-1">Vendidos  {sortColumn === "sold" ? (sortDirection === "asc" ? <ChevronUp size={20} /> : <ChevronDown size={20} />) : ""}</p>
-                              </TableHead>
-                              <TableHead>Ações</TableHead>
-                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                           {isLoading ? (
-                              <TableRow>
-                                 <TableCell colSpan={4}>Carregando...</TableCell>
-                              </TableRow>
-                           ) : (
-                              sortedProducts.map((product) => (
-                                 <TableRow key={product.id}>
-                                    <TableCell className="p-3">{product.name}</TableCell>
-                                    <TableCell>
-                                       {categories.find((c) => c.id === product.category_id)?.name || "Sem categoria"}
-                                    </TableCell>
-                                    <TableCell>R$ {product.price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
-                                    <TableCell>R$ {product?.cost?.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) || '0'}</TableCell>
-                                    <TableCell>{product.quantity.toLocaleString("pt-BR")}</TableCell>
-                                    <TableCell>{product.sold}</TableCell>
-                                    <TableCell className="flex">
-                                       <Trash2 fill="transparent" stroke="#fff" size={28}
-                                          className="mr-2 bg-red-600 p-1 cursor-pointer rounded-md"
-                                          onClick={() => handleModalDeleteProduct(product)}
-                                       />
-                                       <Pen fill="transparent" stroke="#fff" size={28}
-                                          className="bg-emerald-600 p-1 cursor-pointer rounded-md"
-                                          onClick={() => handleEditProduct(product)}
-                                       />
-                                    </TableCell>
-                                 </TableRow>
-                              ))
-                           )}
-                        </TableBody>
-                     </Table>
+                     <TableProducts
+                        categories={categories}
+                        products={products}
+                        handleUpdateProduct={handleUpdateProduct}
+                        handleEditProduct={handleEditProduct}
+                        handleModalDeleteProduct={handleModalDeleteProduct}
+                     />
                   </div>
-                  <Dialog open={isOpen} onOpenChange={setIsOpen}>
-                     <DialogContent>
-                        <DialogHeader>
-                           <DialogTitle className="text-center">Edite o produto</DialogTitle>
-                        </DialogHeader>
-                        <form className="flex flex-col gap-3">
-                           <div>
-                              <Label htmlFor="modalName" className="mb-1 text-base">Nome</Label>
-                              <Input id="modalName"
-                                 type="text"
-                                 placeholder="Nome do produto"
-                                 value={modalProduct?.name}
-                                 onChange={(e) => setModalProduct({ ...modalProduct!, name: e.target.value })}
-                                 required
-                              />
-                           </div>
-                           <div>
-                              <Label htmlFor="modalPrice" className="mb-1 text-base">Preço</Label>
-                              <Input id="modalPrice"
-                                 type="number"
-                                 placeholder="Preço do produto"
-                                 value={modalProduct?.price}
-                                 onChange={(e) => setModalProduct({ ...modalProduct!, price: Number(e.target.value) })}
-                                 required
-                              />
-                           </div>
-                           <div>
-                              <Label htmlFor="modalCost" className="mb-1 text-base">Custo</Label>
-                              <Input id="modalCost"
-                                 type="number"
-                                 placeholder="Custo do produto"
-                                 value={modalProduct?.cost}
-                                 onChange={(e) => setModalProduct({ ...modalProduct!, cost: Number(e.target.value) })}
-                                 required
-                              />
-                           </div>
-                           <div>
-                              <Label htmlFor="modalQuantity" className="mb-1 text-base">Quantidade</Label>
-                              <Input id="modalQuantity"
-                                 type="number"
-                                 placeholder="Nome do produto"
-                                 value={modalProduct?.quantity}
-                                 onChange={(e) => setModalProduct({ ...modalProduct!, quantity: Number(e.target.value) })}
-                                 required
-                              />
-                           </div>
-                           <div>
-                              <Label htmlFor="modalSold" className="mb-1 text-base">Vendidos</Label>
-                              <Input id="modalSold"
-                                 type="number"
-                                 placeholder="Quantidade vendida"
-                                 value={modalProduct?.sold}
-                                 onChange={(e) => setModalProduct({ ...modalProduct!, sold: Number(e.target.value) })}
-                                 required
-                              />
-                           </div>
-                           <div>
-                              <Select defaultValue={modalProduct?.category_id} onValueChange={(value) => {
-                                 setSelectedCategory(value),
-                                    setIsError(false)
-                              }}>
-                                 <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Selecione uma categoria" />
-                                 </SelectTrigger>
-                                 <SelectContent>
-                                    <SelectGroup>
-                                       <SelectLabel>Categorias</SelectLabel>
-                                       {categories && categories.map((c) => c.name ? (
-                                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                       ) : null)}
-                                    </SelectGroup>
-                                 </SelectContent>
-                              </Select>
-                           </div>
-                           {isError &&
-                              <p className="text-red-600 text-center text-sm">{errorMessage}</p>
-                           }
-                        </form>
-                        <div className="flex justify-center gap-3">
-                           <Button onClick={handleUpdateProduct}>Confirmar</Button>
-                           <DialogClose className="bg-red-600 px-3 py-1 rounded-md text-white cursor-pointer"
-                              onClick={() => setIsError(false)}>
-                              Cancelar
-                           </DialogClose>
-                        </div>
-                     </DialogContent>
-                  </Dialog>
+                  <ModalEdit
+                     categories={categories}
+                     handleUpdateProduct={handleUpdateProduct}
+                     modalProduct={modalProduct}
+                     setModalProduct={setModalProduct}
+                     isOpen={isOpen}
+                     setIsOpen={setIsOpen}
+                     setSelectedCategory={setSelectedCategory}
+                     isError={isError}
+                     setIsError={setIsError}
+                     errorMessage={errorMessage}
+                  />
                   <Dialog open={alertOpen} onOpenChange={setAlertOpen}>
                      <DialogContent>
                         <DialogHeader>
