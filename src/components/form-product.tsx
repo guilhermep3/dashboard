@@ -3,7 +3,7 @@ import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "./ui/select"
 import { useState } from "react"
-import { productSchema } from "@/app/(private)/products/page"
+import { productSchema } from "@/utils/product-schema"
 
 type props = {
    errorMessage: string;

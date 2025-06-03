@@ -1,7 +1,7 @@
 "use client"
-
 import { Footer } from "@/components/footer";
 import { Loading } from "@/components/loading";
+import { BestSellers } from "@/components/perfil/bestSellers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -10,14 +10,12 @@ import { useProfileStore } from "@/store/zustand";
 import { Product } from "@/types/product";
 import { deleteCookie } from "cookies-next";
 import { LogOut } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react"
 
 export default function Perfil() {
    const [username, setUsername] = useState<string | null>(null);
    const [company, setCompany] = useState<string | null>(null);
-   const [createdAt, setCreatedAt] = useState<any>(null);
    const [email, setEmail] = useState<any>(null);
    const [isLoading, setIsLoading] = useState(true);
    const router = useRouter();
@@ -46,7 +44,6 @@ export default function Perfil() {
 
          setUsername(data?.name || "Usuário");
          setCompany(data?.company_name || "Nome da empresa");
-         setCreatedAt(data?.created_at || "00/00/2025");
          setEmail(session.user.email || "empresa@email.com");
          setTimeout(() => {
             setIsLoading(false);
@@ -71,18 +68,18 @@ export default function Perfil() {
       if (!session) return;
 
       try {
-         // Nome do arquivo baseado no ID do usuário (sempre o mesmo)
+         // Nome do arquivo baseado no ID do usuário
          const fileName = `${session.user.id}-profile`;
          await supabase.storage.from("avatars").remove([fileName]);
 
-         // Sobrescreve a imagem existente (usando upsert: true)
+         // Sobrescreve a imagem existente (upsert: true)
          const { error } = await supabase.storage
             .from("avatars")
             .upload(fileName, file, { cacheControl: "no-store", upsert: true });
 
          if (error) throw error;
 
-         // Obtém a URL pública (já atualizada)
+         // Obtém a URL pública
          const { data: urlData } = await supabase.storage
             .from("avatars")
             .getPublicUrl(fileName);
@@ -185,24 +182,7 @@ export default function Perfil() {
                            </div>
                         </CardContent>
                      </Card>
-                     <Card className="w-full min-w-56 max-w-96">
-                        <CardHeader>
-                           <CardTitle>Produtos</CardTitle>
-                           <CardDescription>Os cinco mais vendidos</CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex flex-col h-full">
-                           <ul className="mb-5">
-                              {products.length > 0
-                                 ? products.slice(0, 5).map((p) => (
-                                    <li className="mb-2 flex justify-between gap-3"><p>{p?.name}</p> <span>{p?.sold} vendas</span></li>
-                                 ))
-                                 : <p>Adicione produtos</p>}
-                           </ul>
-                           <Button className=" w-full mt-auto">
-                              <Link href={'/products'}>{products.length > 0 ? 'Ver todos' : 'Criar produto'}</Link>
-                           </Button>
-                        </CardContent>
-                     </Card>
+                     <BestSellers products={products} />
                   </div>
                </div>
                <Footer />
